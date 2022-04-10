@@ -4,9 +4,6 @@ import { BehaviorSubject, bufferCount, interval, merge, startWith, Subject, swit
 import { share, takeUntil, withLatestFrom } from 'rxjs/operators';
 import { Models } from './models';
 import { Utils } from './utils';
-import CoordinateGridPoint = Models.CoordinateGridPoint;
-import Generators = Models.Generators;
-import MyGenerator = Models.MyGenerator;
 import buildItem = Utils.buildItem;
 import createCoordinatesGrid = Utils.createCoordinatesGrid;
 import dotGridAlgo = Utils.dotGridAlgo;
@@ -32,15 +29,15 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   };
   private unit = 16;
 
-  private generators$ = new BehaviorSubject<Generators[]>([]);
+  private generators$ = new BehaviorSubject<Models.PiGenerator[]>([]);
 
-  private removeGenerator$ = new Subject<MyGenerator>();
+  private removeGenerator$ = new Subject<Models.PiGenerator>();
 
   private currentTime$ = new BehaviorSubject<number>(0);
 
   private destroy$ = new Subject<void>();
 
-  private coordinatesGrid$ = new BehaviorSubject<CoordinateGridPoint[]>([]);
+  private coordinatesGrid$ = new BehaviorSubject<Models.CoordinateGridPoint[]>([]);
 
   private events = {
     windowResized$: new Subject<{ width: number, height: number }>(),
@@ -72,66 +69,9 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // clear canvas
         p.background(0);
 
-        let myGenerators = this.generators$.value;
+        this.drawLinesBetweenItems(p, generators);
 
-        let items: Models.ItemGenerator[] = myGenerators
-          .filter(x => x.kind === 'item' && x.coordinates !== undefined)
-          .map(x => x as Models.ItemGenerator);
-
-        //draw dots between items
-        items.forEach(
-          (item, index) => {
-            items.forEach(
-              (item2, index2) => {
-                if (index !== index2) {
-                  // alpha inverse proportional to distance
-                  let bx: number = item2.coordinates.current.x.value;
-                  let by: number = item2.coordinates.current.y.value;
-                  let ax: number = item.coordinates.current.x.value;
-                  let ay: number = item.coordinates.current.y.value;
-
-                  let distance: number = p.dist(ax, ay, bx, by);
-                  // alpha proportional to distance (0-100) with further distance = less alpha
-                  let alpha: number = p.map(distance, 0, p.width, 0, 100);
-
-                  // round alpha to nearest integer
-                  alpha = Math.round(alpha);
-
-                  // half alpha
-                  alpha = alpha / 2;
-
-                  // flicker alpha slightly
-                  let life = item.lifetimeManager.remainingLifetimePercentage$.value;
-                  if (life < 10 || life > 90) {
-                    alpha = p.random(0, alpha);
-                  }
-                  // alpha = alpha + p.random(-10, 10);
-
-                  p.stroke(255, alpha);
-                  // write distance between items
-                  p.line(
-                    ax, ay, bx,
-                    by
-                  );
-                  p.textSize(8);
-                  p.text(Math.round(distance), (ax + bx) / 2,
-                    (ay + by) / 2
-                  );
-
-                  p.strokeWeight(1);
-                  p.line(
-                    ax, ay, bx,
-                    by
-                  );
-                }
-              }
-            );
-          }
-        );
-
-        generators.forEach(generator => {
-          generator.draw(p, time);
-        });
+        generators.forEach(g => g.draw(p, time));
 
         this.additionalRenderSteps(p);
 
@@ -196,15 +136,75 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     ).subscribe(generator => this.generators$.next(this.generators$.value.filter(g => g.id !== generator.id)));
   }
 
+  private drawLinesBetweenItems(p: p5, myGenerators: Models.PiGenerator[]): void {
+
+    let items: Models.ItemGenerator[] = myGenerators
+      .filter(x => x.kind === 'item')
+      .map(x => x as Models.ItemGenerator);
+
+    //draw dots between items
+    items.forEach(
+      (item, index) => {
+        items.forEach(
+          (item2, index2) => {
+            if (index !== index2) {
+              // alpha inverse proportional to distance
+              let aCoord = item.movementManager.getCurrentCoordinates();
+              let ax: number = aCoord.x;
+              let ay: number = aCoord.y;
+              let bCoord = item2.movementManager.getCurrentCoordinates();
+              let bx: number = bCoord.x;
+              let by: number = bCoord.y;
+
+              let distance: number = p.dist(ax, ay, bx, by);
+              // alpha proportional to distance (0-100) with further distance = less alpha
+              let alpha: number = p.map(distance, 0, p.width, 0, 100);
+
+              // round alpha to nearest integer
+              alpha = Math.round(alpha);
+
+              // half alpha
+              alpha = alpha / 2;
+
+              // flicker alpha slightly
+              let life = item.lifetimeManager.remainingLifetimePercentage$.value;
+              if (life < 10 || life > 90) {
+                alpha = p.random(0, alpha);
+              }
+              // alpha = alpha + p.random(-10, 10);
+
+              p.stroke(255, alpha);
+              // write distance between items
+              p.line(
+                ax, ay, bx,
+                by
+              );
+              p.textSize(8);
+              p.text(Math.round(distance), (ax + bx) / 2,
+                (ay + by) / 2
+              );
+
+              p.strokeWeight(1);
+              p.line(
+                ax, ay, bx,
+                by
+              );
+            }
+          }
+        );
+      }
+    );
+  }
+
   private addGenerators(): void {
     this.interval$
       .pipe(
-        bufferCount(secondsToFrames(6, this.fps)),
+        bufferCount(secondsToFrames(5, this.fps)),
         startWith('init'),
         switchMap(() => this.interval$
           .pipe(
             bufferCount(secondsToFrames(0.1, this.fps)),
-            take(8)
+            take(4)
           )
         ),
         takeUntil(this.destroy$)
@@ -215,7 +215,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         let item = buildItem(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
           myGenerators
-            .filter(x => x.kind === 'item' && x.coordinates !== undefined)
+            .filter(x => x.kind === 'item')
             .map(x => x as Models.ItemGenerator)
         );
 
@@ -237,7 +237,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.currentTime$.value;
   }
 
-  private buildCoordinatesGrid(p: p5): CoordinateGridPoint[] {
+  private buildCoordinatesGrid(p: p5): Models.CoordinateGridPoint[] {
     return createCoordinatesGrid(12, 8, getOrigin(p), this.unit);
   }
 

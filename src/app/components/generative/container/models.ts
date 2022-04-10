@@ -1,6 +1,7 @@
 import p5 from 'p5';
 import { BehaviorSubject } from 'rxjs';
 import { LifetimeManager } from './LifetimeManager';
+import { MovementManager } from './MovementManager';
 import MyGenerator = Models.MyGenerator;
 
 export interface DotGridGenerator extends MyGenerator {
@@ -17,23 +18,44 @@ export namespace Models {
     draw(p: p5, time: number): void;
   }
 
-  export type Generators = ItemGenerator | DotGridGenerator;
+  export type PiGenerator = ItemGenerator | DotGridGenerator;
 
-  export interface ItemGenerator extends MyGenerator {
+  export class ItemGenerator implements MyGenerator {
+    kind: 'item' = 'item';
+    id: number;
+    lifetimeManager: LifetimeManager;
+    movementManager: MovementManager;
+    draw: (p: p5, time: number) => void;
+
+    constructor(
+      id: number,
+      lifetimeManager: LifetimeManager,
+      movementManager: MovementManager,
+      draw: (p: p5, time: number) => void
+    ) {
+      this.id = id;
+      this.lifetimeManager = lifetimeManager;
+      this.movementManager = movementManager;
+      this.draw = draw;
+    }
+
+  }
+
+  export interface Positionable {
     coordinates: {
       current: ObservableCoordinates;
+      progress: BehaviorSubject<number>; // number between 0 and 100
       starting: Coordinates,
       final: Coordinates
     };
-    kind: 'item';
   }
 
-  interface ObservableCoordinates {
+  export interface ObservableCoordinates {
     x: BehaviorSubject<number>;
     y: BehaviorSubject<number>;
   }
 
-  interface Coordinates {
+  export interface Coordinates {
     x: number;
     y: number;
   }

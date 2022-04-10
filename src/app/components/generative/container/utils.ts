@@ -2,10 +2,12 @@ import p5 from 'p5';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { LifetimeManager } from './LifetimeManager';
 import { DotGridGenerator, Models } from './models';
+import { MovementManager } from './MovementManager';
 
 export namespace Utils {
 
   import CoordinateGridPoint = Models.CoordinateGridPoint;
+  import Coordinates = Models.Coordinates;
   import ItemGenerator = Models.ItemGenerator;
 
   function buildId(currentTime: number): number {
@@ -91,33 +93,35 @@ export namespace Utils {
     return grid;
   }
 
-  function drawX(p: p5, coordinate: CoordinateGridPoint, unit: number): void {
+  function drawX(p: p5, coordinate: Coordinates, unit: number): void {
     p.line(coordinate.x - unit, coordinate.y - unit, coordinate.x + unit, coordinate.y + unit);
     p.line(coordinate.x + unit, coordinate.y - unit, coordinate.x - unit, coordinate.y + unit);
   }
 
-  function drawTriangle(p: p5, coordinate: CoordinateGridPoint, unit: number): void {
+  function drawTriangle(p: p5, coordinate: Coordinates, unit: number): void {
+    // equilateral triangle pointing down
+
     p.triangle(
-      coordinate.x - unit, coordinate.y - unit,
-      coordinate.x + unit, coordinate.y + unit,
-      coordinate.x - unit, coordinate.y + unit
+      coordinate.x - unit, coordinate.y + unit,
+      coordinate.x, coordinate.y - unit,
+      coordinate.x + unit, coordinate.y + unit
     );
 
   }
 
-  function drawCircle(p: p5, coordinate: CoordinateGridPoint, unit: number): void {
+  function drawCircle(p: p5, coordinate: Coordinates, unit: number): void {
     p.ellipse(coordinate.x, coordinate.y, unit * 2, unit * 2);
   }
 
-  function drawBox(p: p5, coordinate: CoordinateGridPoint, unit: number): void {
+  function drawBox(p: p5, coordinate: Coordinates, unit: number): void {
     p.rect(coordinate.x - unit, coordinate.y - unit, unit * 2, unit * 2);
   }
 
-  function drawRemainingLife(p: p5, remainingLife: number, coordinate: Models.CoordinateGridPoint, unit: number): void {
+  function drawRemainingLife(p: p5, remainingLife: number, coordinates: Coordinates, unit: number): void {
     p.fill(255, 10);
     p.textFont('monospace');
     p.textSize(8);
-    p.text(`${ Math.round(remainingLife) }`, coordinate.x, coordinate.y - unit * 2);
+    p.text(`${ Math.round(remainingLife) }`, coordinates.x, coordinates.y - unit * 2);
   }
 
   function drawUnitSize(p: p5, coordinate: Models.CoordinateGridPoint, unit: number): void {
@@ -143,12 +147,21 @@ export namespace Utils {
       : unit * 16;
 
     // filter out points that are already taken
-    availablePoints = availablePoints.filter(point => {
-      return !otherCircles.some(circle => circle.coordinates.starting.x === point.x && circle.coordinates.starting.y === point.y);
-    });
+    // availablePoints = availablePoints.filter(point => {
+    //   return otherCircles.every(otherCircle => {
+    //     return !(
+    //       point.x === otherCircle.movementManager.getCurrentCoordinates().x &&
+    //       point.y === otherCircle.movementManager.getCurrentCoordinates().y
+    //     );
+    //   });
+    // });
 
-    // chose a random x and y coordinate from coordinates grid
-    const coordinate = availablePoints[Math.floor(Math.random() * availablePoints.length)];
+    function getRandomCoordinateGridPoint(): CoordinateGridPoint {
+      return availablePoints[Math.floor(Math.random() * availablePoints.length)];
+    }
+
+// chose a random x and y coordinate from coordinates grid
+    const startingCoordinates = getRandomCoordinateGridPoint();
 
     let lifeDuration = secondsToFrames(4, fps);
     let lifetimeManager: LifetimeManager = new LifetimeManager(
@@ -162,60 +175,96 @@ export namespace Utils {
     const drawFunction = Math.random() < 0.5 ? drawCircle : Math.random() < 0.5 ? drawBox : Math.random() < 0.5 ? drawTriangle : drawX;
     // const drawFunction = drawBox ;
 
-    return {
-      draw: (p, currentTime) => {
+    let draw = (p: p5, currentTime: number) => {
 
-        p.stroke(255, 10);
-        const remainingLife: number = lifetimeManager.getRemainingLifetime();
+      p.stroke(255, 10);
+      const remainingLife: number = lifetimeManager.getRemainingLifetime();
 
-        // decrease fill opacity based on remaining life starting from full to 0
-        const fillOpacity = Math.round(remainingLife / lifeDuration * 255);
+      // decrease fill opacity based on remaining life starting from full to 0
+      const fillOpacity = Math.round(remainingLife / lifeDuration * 255);
 
-        // flicker opacity when life is less than half of the duration with more flicker when close to 0
-        const flickerOpacity = Math.round(remainingLife / lifeDuration * 255 * (1 - (remainingLife / lifeDuration)));
+      // flicker opacity when life is less than half of the duration with more flicker when close to 0
+      const flickerOpacity = Math.round(remainingLife / lifeDuration * 255 * (1 - (remainingLife / lifeDuration)));
 
-        // fill black
+      // fill black
 
-        // flicker stroke when close to dying only in the last 10% of life
-        if (remainingLife < lifeDuration * 0.9) {
-          p.stroke(255, flickerOpacity * 0.5);
-        } else {
-          p.stroke(255, fillOpacity * 0.5);
-        }
+      // flicker stroke when close to dying only in the last 10% of life
+      if (remainingLife < lifeDuration * 0.9) {
+        p.stroke(255, flickerOpacity * 0.5);
+      } else {
+        p.stroke(255, fillOpacity * 0.5);
+      }
 
-        // p.stroke(255, flickerOpacity);
-        p.stroke(255);
+      // p.stroke(255, flickerOpacity);
+      p.stroke(255);
 
-        // p.fill(255, flicker);
+      // p.fill(255, flicker);
 
-        // reduce unit size by half when life is less than half of the duration
-        // unit = remainingLife < lifeDuration * 0.5 ? unit / 2 : unit;
+      // reduce unit size by half when life is less than half of the duration
+      // unit = remainingLife < lifeDuration * 0.5 ? unit / 2 : unit;
 
-        p.fill(0);
-        drawFunction(p, coordinate, unit);
+      p.fill(0);
 
-        drawRemainingLife(p, lifetimeManager.remainingLifetimePercentage$.value, coordinate, unit);
-        // drawUnitSize(p, coordinate, unit);
+      let currentCoordinates: Models.Coordinates = movementManager.getCurrentCoordinates();
+      drawFunction(p, currentCoordinates, unit);
 
-      },
-      coordinates: {
-        current: {
-          x: new BehaviorSubject<number>(coordinate.x),
-          y: new BehaviorSubject<number>(coordinate.y)
-        },
-        starting: {
-          x: coordinate.x,
-          y: coordinate.y
-        },
-        final: {
-          x: coordinate.x,
-          y: coordinate.y
-        }
-      },
-      lifetimeManager,
-      id: buildId(currentTime$.value),
-      kind: 'item'
+      drawRemainingLife(p, lifetimeManager.remainingLifetimePercentage$.value, currentCoordinates, unit);
+      // drawUnitSize(p, coordinate, unit);
+
     };
+
+    let movementManager: MovementManager = new MovementManager(
+      destroy$,
+      currentTime$,
+      lifeDuration / 1.25,
+      {
+        x: startingCoordinates.x,
+        y: startingCoordinates.y
+      },
+      getRandomCoordinateGridPoint()
+    );
+
+    // movement manager will move the item to a random point on the screen
+
+    return new ItemGenerator(
+      buildId(currentTime$.value),
+      lifetimeManager, movementManager,
+      draw
+    );
+
+    // return {
+    //   draw,
+    //   coordinates: {
+    //     current: {
+    //       x: new BehaviorSubject<number>(coordinate.x),
+    //       y: new BehaviorSubject<number>(coordinate.y)
+    //     },
+    //     starting: {
+    //       x: coordinate.x,
+    //       y: coordinate.y
+    //     },
+    //     final: {
+    //       x: coordinate.x,
+    //       y: coordinate.y
+    //     }
+    //   },
+    //   lifetimeManager,
+    //   movementManager: new MovementManager(
+    //     destroy$,
+    //     currentTime$,
+    //     secondsToFrames(2, fps),
+    //     {
+    //       x: coordinate.x,
+    //       y: coordinate.y
+    //     },
+    //     {
+    //       x: coordinate.x + 200,
+    //       y: coordinate.y + 200
+    //     }
+    //   ),
+    //   id: buildId(currentTime$.value),
+    //   kind: 'item'
+    // };
   }
 
   export function getOrigin(p: p5): { x: number, y: number } {
