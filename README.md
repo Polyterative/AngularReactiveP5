@@ -4,8 +4,7 @@ This project is a friendly basic setup to work with https://github.com/processin
 
 Start exploring the code from here: https://github.com/Polyterative/AngularReactiveP5/blob/master/src/app/components/generative/container/container.component.ts
 
-![image](https://user-images.githubusercontent.com/16295552/162621303-e7c751c3-a11b-4877-a52d-47e896cd0c89.png)
-
+![image](https://user-images.githubusercontent.com/16295552/162630917-eb2ac830-931f-4486-98f8-f3c3554bf960.png)
 
 ## Development server
 
