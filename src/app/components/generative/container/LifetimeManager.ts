@@ -4,7 +4,7 @@ export class LifetimeManager {
 
   remainingLifetime$: BehaviorSubject<number> = new BehaviorSubject(0);
   private readonly desiredLifeTime;
-  death$ = new Subject<void>();
+  kill$ = new Subject<void>();
 
   constructor(
     currentTime$: BehaviorSubject<number>,
@@ -15,7 +15,7 @@ export class LifetimeManager {
 
     this.desiredLifeTime = desiredLifeTime;
 
-    let destroyers$ = merge(destroy$, this.death$);
+    let destroyers$ = merge(destroy$, this.kill$);
 
     currentTime$
       .pipe(
@@ -29,7 +29,7 @@ export class LifetimeManager {
     destroy$.pipe(
       takeUntil(destroyers$)
     ).subscribe(() => {
-      this.death$.next();
+      this.kill$.next();
     });
 
     this.remainingLifetime$
@@ -38,7 +38,7 @@ export class LifetimeManager {
       )
       .subscribe(remainingLifeTime => {
         if (remainingLifeTime <= 0) {
-          this.death$.next();
+          this.kill$.next();
         }
       });
 

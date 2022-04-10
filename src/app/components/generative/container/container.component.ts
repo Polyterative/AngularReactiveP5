@@ -95,6 +95,14 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     // resize canvas on window resize
     p.windowResized = () => this.events.windowResized$.next({ width: p.windowWidth, height: p.windowHeight });
 
+    // kill generators on window resize
+    this.events.windowResized$
+      .pipe(
+        withLatestFrom(this.generators$),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(([_, generators]) => generators.forEach(generator => generator.lifetimeManager.kill$.next()));
+
     // resize canvas on window resize
     this.events.windowResized$.pipe(
       takeUntil(this.destroy$)
@@ -144,7 +152,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           item
         ]);
 
-        item.lifetimeManager.death$.pipe(
+        item.lifetimeManager.kill$.pipe(
           takeUntil(this.destroy$),
           take(1)
         ).subscribe(() => {
