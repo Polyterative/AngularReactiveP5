@@ -100,7 +100,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
                   // half alpha
                   alpha = alpha / 2;
 
-                  // flicker alpha slightly if remaining time is less than 20%
+                  // flicker alpha slightly
                   let life = item.lifetimeManager.remainingLifetimePercentage$.value;
                   if (life < 10 || life > 90) {
                     alpha = p.random(0, alpha);
