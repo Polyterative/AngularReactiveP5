@@ -1,19 +1,24 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import p5 from 'p5';
 import { BehaviorSubject, bufferCount, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { share, takeUntil, withLatestFrom } from 'rxjs/operators';
-import { GenerativeUtils } from './GenerativeUtils';
-import buildCircleItem = GenerativeUtils.buildCircleItem;
-import CoordinateGridPoint = GenerativeUtils.CoordinateGridPoint;
-import MyGenerator = GenerativeUtils.MyGenerator;
+import { Models } from './models';
+import { Utils } from './utils';
+import CoordinateGridPoint = Models.CoordinateGridPoint;
+import MyGenerator = Models.MyGenerator;
+import buildCircleItem = Utils.buildCircleItem;
+import createCoordinatesGrid = Utils.createCoordinatesGrid;
+import dotGridAlgo = Utils.dotGridAlgo;
+import getOrigin = Utils.getOrigin;
+import secondsToFrames = Utils.secondsToFrames;
 
 @Component({
-  selector: 'app-pfive-container',
-  templateUrl: './pfive-container.component.html',
-  styleUrls: ['./pfive-container.component.scss'],
+  selector: 'app-container',
+  templateUrl: './container.component.html',
+  styleUrls: ['./container.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PfiveContainerComponent implements OnInit, OnDestroy {
+export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   fps = 144;
 
   // rxjs clock
@@ -28,7 +33,9 @@ export class PfiveContainerComponent implements OnInit, OnDestroy {
 
   private generators$ = new BehaviorSubject<MyGenerator[]>([]);
 
-  private currentTime = 0;
+  private removeGenerator$ = new Subject<MyGenerator>();
+
+  private currentTime$ = new BehaviorSubject<number>(0);
 
   private destroy$ = new Subject<void>();
 
@@ -36,64 +43,66 @@ export class PfiveContainerComponent implements OnInit, OnDestroy {
 
   private events = {
     windowResized$: new Subject<{ width: number, height: number }>(),
-    pInitialize$: new Subject<{ p: p5 }>()
+    pInitialized$: new Subject<{ p: p5 }>()
   }
 
   constructor() {
 
   }
 
-  ngOnInit() {
-    this.events.pInitialize$
+  ngAfterViewInit() {
+
+    this.events.pInitialized$
       .pipe(
-        switchMap(() => this.interval$),
+        switchMap(x => this.interval$),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(value => this.currentTime$.next(value));
+
+    this.events.pInitialized$
+      .pipe(
+        switchMap(() => this.currentTime$),
+        // filter(x => p.setupDone),
         withLatestFrom(this.generators$),
         // delay(250)
         takeUntil(this.destroy$)
       )
       .subscribe(([x, generators]) => {
-        this.currentTime = x;
-
-        // remove dead generators
-        generators = generators.filter(generator => this.currentTime - generator.deathTime < 0);
-
         // clear canvas
         p.background(0);
 
         generators.forEach(generator => {
-          generator.draw(p, this.currentTime);
+          generator.draw(p, this.getCurrentTime());
         });
 
-        // this.additionalRenderSteps(p);
-
-        this.generators$.next(generators);
+        this.additionalRenderSteps(p);
 
       });
 
     let p: p5;
 
-    p = new p5(p => {
+    p = new p5((p: p5) => {
       p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight)
           .parent('canvas');
         p.noLoop();
         p.frameRate(this.fps);
+
+        this.events.pInitialized$.next({ p });
       };
     });
-
-    this.events.pInitialize$.next({ p });
 
     // resize canvas on window resize
     p.windowResized = () => this.events.windowResized$.next({ width: p.windowWidth, height: p.windowHeight });
 
+    // resize canvas on window resize
     this.events.windowResized$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(({ width, height }) => {
-      p.resizeCanvas(width, height);
-    });
+    ).subscribe(({ width, height }) => p.resizeCanvas(width, height));
 
+    // update coordinates grid on window resize and init
     merge(
-      this.events.pInitialize$,
+      this.events.pInitialized$,
       this.events.windowResized$
     )
       .pipe(
@@ -110,25 +119,46 @@ export class PfiveContainerComponent implements OnInit, OnDestroy {
       });
 
     this.generators$.next([
-      GenerativeUtils.dotGridAlgo(this.coordinatesGrid$, this.unit)
+      dotGridAlgo(this.coordinatesGrid$, this.unit, this.currentTime$, this.fps, this.destroy$)
     ]);
 
     // add generator every x seconds
+    this.addGenerators();
+
+    this.removeGenerator$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(generator => this.generators$.next(this.generators$.value.filter(g => g.id !== generator.id)));
+  }
+
+  private addGenerators(): void {
     this.interval$
       .pipe(
-        bufferCount(this.secondsToFrames(0.1)),
+        bufferCount(secondsToFrames(0.01, this.fps)),
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
+        let item = buildCircleItem(this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$);
+
         this.generators$.next([
           ...this.generators$.value,
-          buildCircleItem(this.secondsToFrames(1), this.currentTime, this.coordinatesGrid$.value, this.unit)
+          item
         ]);
+
+        item.lifetimeManager.death$.pipe(
+          takeUntil(this.destroy$),
+          take(1)
+        ).subscribe(() => {
+          this.removeGenerator$.next(item);
+        });
       });
   }
 
-  private getCoordinatesGrid(p: p5): GenerativeUtils.CoordinateGridPoint[] {
-    return GenerativeUtils.createCoordinatesGrid(8, 8, this.getOrigin(p), this.unit);
+  private getCurrentTime(): number {
+    return this.currentTime$.value;
+  }
+
+  private getCoordinatesGrid(p: p5): CoordinateGridPoint[] {
+    return createCoordinatesGrid(8, 8, getOrigin(p), this.unit);
   }
 
   ngOnDestroy(): void {
@@ -138,14 +168,12 @@ export class PfiveContainerComponent implements OnInit, OnDestroy {
   }
 
   private additionalRenderSteps(p: p5): void {
+    p.textFont('monospace');
     p.stroke(255, 255 / 2);
     p.textSize(12);
 
-    // change p font in a monospace font
-    p.textFont('monospace');
-
     // write "frame:" and "fps:" and "windowSize:" in p canvas in the top left corner one below each other with a gap of 2 unit pixels
-    p.text(`frame: ${ this.currentTime }`, this.origin.x, this.origin.y + 2 * this.unit);
+    p.text(`frame: ${ this.getCurrentTime() }`, this.origin.x, this.origin.y + 2 * this.unit);
     p.text(`fps: ${ this.fps }`, this.origin.x, this.origin.y + 4 * this.unit);
     p.text(`windowSize: ${ window.innerWidth }x${ window.innerHeight }`, this.origin.x, this.origin.y + 6 * this.unit);
 
@@ -172,15 +200,7 @@ export class PfiveContainerComponent implements OnInit, OnDestroy {
 
   }
 
-  private getOrigin(p: p5): { x: number, y: number } {
-    return {
-      x: p.windowWidth / 2,
-      y: p.windowHeight / 2
-    };
-  }
-
-  private secondsToFrames(seconds: number): number {
-    return Math.round(this.fps * seconds);
+  ngOnInit(): void {
   }
 
 }

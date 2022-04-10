@@ -1,13 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { PfiveContainerComponent } from './pfive-container/pfive-container.component';
+import { ContainerComponent } from './container/container.component';
 
 @NgModule({
   declarations: [
-    PfiveContainerComponent
+    ContainerComponent
   ],
   exports: [
-    PfiveContainerComponent
+    ContainerComponent
   ],
   imports: [
     CommonModule
