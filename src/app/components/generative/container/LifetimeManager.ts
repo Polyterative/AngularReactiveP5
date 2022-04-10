@@ -3,6 +3,7 @@ import { BehaviorSubject, merge, Observable, Subject, takeUntil } from 'rxjs';
 export class LifetimeManager {
 
   remainingLifetime$: BehaviorSubject<number> = new BehaviorSubject(0);
+  remainingLifetimePercentage$: BehaviorSubject<number> = new BehaviorSubject(0);
   private readonly desiredLifeTime;
   kill$ = new Subject<void>();
 
@@ -41,6 +42,10 @@ export class LifetimeManager {
           this.kill$.next();
         }
       });
+
+    this.remainingLifetime$.subscribe(remainingLifeTime => {
+      this.remainingLifetimePercentage$.next((remainingLifeTime / this.desiredLifeTime) * 100);
+    });
 
   }
 

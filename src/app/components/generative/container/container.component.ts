@@ -5,8 +5,9 @@ import { share, takeUntil, withLatestFrom } from 'rxjs/operators';
 import { Models } from './models';
 import { Utils } from './utils';
 import CoordinateGridPoint = Models.CoordinateGridPoint;
+import Generators = Models.Generators;
 import MyGenerator = Models.MyGenerator;
-import buildCircleItem = Utils.buildCircleItem;
+import buildItem = Utils.buildItem;
 import createCoordinatesGrid = Utils.createCoordinatesGrid;
 import dotGridAlgo = Utils.dotGridAlgo;
 import getOrigin = Utils.getOrigin;
@@ -29,9 +30,9 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     x: 0,
     y: 0
   };
-  private unit = 8;
+  private unit = 16;
 
-  private generators$ = new BehaviorSubject<MyGenerator[]>([]);
+  private generators$ = new BehaviorSubject<Generators[]>([]);
 
   private removeGenerator$ = new Subject<MyGenerator>();
 
@@ -67,12 +68,69 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // delay(250)
         takeUntil(this.destroy$)
       )
-      .subscribe(([x, generators]) => {
+      .subscribe(([time, generators]) => {
         // clear canvas
         p.background(0);
 
+        let myGenerators = this.generators$.value;
+
+        let items: Models.ItemGenerator[] = myGenerators
+          .filter(x => x.kind === 'item' && x.coordinates !== undefined)
+          .map(x => x as Models.ItemGenerator);
+
+        //draw dots between items
+        items.forEach(
+          (item, index) => {
+            items.forEach(
+              (item2, index2) => {
+                if (index !== index2) {
+                  // alpha inverse proportional to distance
+                  let bx: number = item2.coordinates.current.x.value;
+                  let by: number = item2.coordinates.current.y.value;
+                  let ax: number = item.coordinates.current.x.value;
+                  let ay: number = item.coordinates.current.y.value;
+
+                  let distance: number = p.dist(ax, ay, bx, by);
+                  // alpha proportional to distance (0-100) with further distance = less alpha
+                  let alpha: number = p.map(distance, 0, p.width, 0, 100);
+
+                  // round alpha to nearest integer
+                  alpha = Math.round(alpha);
+
+                  // half alpha
+                  alpha = alpha / 2;
+
+                  // flicker alpha slightly if remaining time is less than 20%
+                  let life = item.lifetimeManager.remainingLifetimePercentage$.value;
+                  if (life < 10 || life > 90) {
+                    alpha = p.random(0, alpha);
+                  }
+                  // alpha = alpha + p.random(-10, 10);
+
+                  p.stroke(255, alpha);
+                  // write distance between items
+                  p.line(
+                    ax, ay, bx,
+                    by
+                  );
+                  p.textSize(8);
+                  p.text(Math.round(distance), (ax + bx) / 2,
+                    (ay + by) / 2
+                  );
+
+                  p.strokeWeight(1);
+                  p.line(
+                    ax, ay, bx,
+                    by
+                  );
+                }
+              }
+            );
+          }
+        );
+
         generators.forEach(generator => {
-          generator.draw(p, this.getCurrentTime());
+          generator.draw(p, time);
         });
 
         this.additionalRenderSteps(p);
@@ -117,7 +175,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         startWith('init'),
         takeUntil(this.destroy$)
       ).subscribe(() => {
-      this.coordinatesGrid$.next(this.getCoordinatesGrid(p));
+      this.coordinatesGrid$.next(this.buildCoordinatesGrid(p));
     });
 
     this.destroy$
@@ -141,14 +199,28 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   private addGenerators(): void {
     this.interval$
       .pipe(
-        bufferCount(secondsToFrames(0.01, this.fps)),
+        bufferCount(secondsToFrames(6, this.fps)),
+        startWith('init'),
+        switchMap(() => this.interval$
+          .pipe(
+            bufferCount(secondsToFrames(0.1, this.fps)),
+            take(8)
+          )
+        ),
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
-        let item = buildCircleItem(this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$);
+        let myGenerators = this.generators$.value;
+
+        let item = buildItem(
+          this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
+          myGenerators
+            .filter(x => x.kind === 'item' && x.coordinates !== undefined)
+            .map(x => x as Models.ItemGenerator)
+        );
 
         this.generators$.next([
-          ...this.generators$.value,
+          ...myGenerators,
           item
         ]);
 
@@ -165,8 +237,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.currentTime$.value;
   }
 
-  private getCoordinatesGrid(p: p5): CoordinateGridPoint[] {
-    return createCoordinatesGrid(8, 8, getOrigin(p), this.unit);
+  private buildCoordinatesGrid(p: p5): CoordinateGridPoint[] {
+    return createCoordinatesGrid(12, 8, getOrigin(p), this.unit);
   }
 
   ngOnDestroy(): void {
@@ -185,6 +257,11 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     p.text(`fps: ${ this.fps }`, this.origin.x, this.origin.y + 4 * this.unit);
     p.text(`windowSize: ${ window.innerWidth }x${ window.innerHeight }`, this.origin.x, this.origin.y + 6 * this.unit);
 
+    // this.drawMouseToOrigin(p);
+
+  }
+
+  private drawMouseToOrigin(p: p5): void {
     // draw mouse position coordinates following the mouse
     p.textSize(16);
 
@@ -198,14 +275,6 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // draw line between mouse position and center of canvas
     p.line(p.mouseX, p.mouseY, p.width / 2, p.height / 2);
-
-    // draw grid coordinates  outer border
-    // this.p.stroke(255);
-    // this.p.line(this.origin.x, this.origin.y, this.origin.x + this.p.width, this.origin.y);
-    // this.p.line(this.origin.x, this.origin.y, this.origin.x, this.origin.y + this.p.height);
-    // this.p.line(this.origin.x + this.p.width, this.origin.y, this.origin.x + this.p.width, this.origin.y + this.p.height);
-    // this.p.line(this.origin.x, this.origin.y + this.p.height, this.origin.x + this.p.width, this.origin.y + this.p.height);
-
   }
 
   ngOnInit(): void {
