@@ -1,6 +1,9 @@
-# GENERATIVE
+# What is this?
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 13.1.2.
+This project is a friendly basic setup to work with p5 and rxjs in an angular environment.
+
+![image](https://user-images.githubusercontent.com/16295552/162621303-e7c751c3-a11b-4877-a52d-47e896cd0c89.png)
+
 
 ## Development server
 
