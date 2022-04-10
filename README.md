@@ -2,6 +2,8 @@
 
 This project is a friendly basic setup to work with https://github.com/processing/p5.js and rxjs in an angular environment.
 
+Start exploring the code from here: https://github.com/Polyterative/AngularReactiveP5/blob/master/src/app/components/generative/container/container.component.ts
+
 ![image](https://user-images.githubusercontent.com/16295552/162621303-e7c751c3-a11b-4877-a52d-47e896cd0c89.png)
 
 
