@@ -21,7 +21,7 @@ import secondsToFrames = Utils.secondsToFrames;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
-  fps = 144;
+  fps = 60;
 
   // rxjs clock
   interval$ = interval(1000 / this.fps)
