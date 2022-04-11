@@ -1,7 +1,8 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import p5 from 'p5';
-import { BehaviorSubject, bufferCount, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
+import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil, withLatestFrom } from 'rxjs/operators';
+import { WebMidi } from 'webmidi';
 import { Models } from './models';
 import { Utils } from './utils';
 import Coordinates = Models.Coordinates;
@@ -33,6 +34,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   private unit = 16;
 
   private generators$ = new BehaviorSubject<Models.PiGenerator[]>([]);
+
+  private addGenerators$ = new Subject<Models.PiGenerator[]>();
 
   private removeGenerator$ = new Subject<Models.PiGenerator>();
 
@@ -72,21 +75,15 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // clear canvas
         p.background(0);
 
-        this.drawLinesBetweenItems(p, generators);
+        let items: Models.ItemGenerator[] = generators
+          .filter(x => x.kind === 'item')
+          .map(x => x as Models.ItemGenerator);
 
-        generators.map(x => x.drawLayers);
-        // yield all generators with increasing array index
+        this.drawLinesBetweenItems(p, generators, items);
 
-        // find the highest layer index
-        const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
+        if (items.length === 3) { this.drawShapeBetweenItems(p, items);}
 
-        // draw all layers
-        for (let i = 0; i < highestLayerIndex; i++) {
-          let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
-          let cleanFunctions: DrawFunction[] = drawFunctions.filter(x => x !== undefined) as DrawFunction[];
-          //draw
-          cleanFunctions.forEach(x => x(p, time));
-        }
+        this.renderGenerators(p, time, generators);
 
         this.additionalRenderSteps(p, window, this.origin, this.getCurrentTime());
 
@@ -148,14 +145,51 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.removeGenerator$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(generator => this.generators$.next(this.generators$.value.filter(g => g.id !== generator.id)));
+    ).subscribe(generator => {
+      let generators: Models.PiGenerator[] = this.generators$.value;
+      // remove generator from array dynamic programming style so it's faster
+      let index = generators.findIndex(x => x.id === generator.id);
+      if (index > -1) {
+        generators.splice(index, 1);
+      }
+      this.generators$.next(generators);
+    });
   }
 
-  private drawLinesBetweenItems(p: p5, myGenerators: Models.PiGenerator[]): void {
+  private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
+    // find the highest layer index
+    const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
 
-    let items: Models.ItemGenerator[] = myGenerators
-      .filter(x => x.kind === 'item')
-      .map(x => x as Models.ItemGenerator);
+    // draw all layers
+    for (let i = 0; i < highestLayerIndex; i++) {
+      let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
+      let cleanFunctions: DrawFunction[] = drawFunctions.filter(x => x !== undefined) as DrawFunction[];
+      //draw
+      cleanFunctions.forEach(x => x(p, time));
+    }
+  }
+
+  private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
+    // fill shape between items with a polygon between all the points
+    let points = items.map(x => x.movementManager.getCurrentCoordinates())
+
+    // draw polygon between all the points
+
+    //flicker alpharandomly when items are close to dying
+    let alpha = 255 / 20;
+    let lifeInPerc = items[0].lifetimeManager.getRemainingLifetimePercentage();
+    if (lifeInPerc < 5 || lifeInPerc > 90) {
+      alpha = p.map(p.random(0, 100 - lifeInPerc) - lifeInPerc, 0, 100, 0, 255 / 50);
+    }
+    p.fill(255, alpha);
+    p.beginShape();
+    points.forEach(point => {
+      p.vertex(point.x, point.y);
+    });
+    p.endShape(p.CLOSE);
+  }
+
+  private drawLinesBetweenItems(p: p5, myGenerators: Models.PiGenerator[], items: Models.ItemGenerator[]): void {
 
     //draw dots between items
     items.forEach((item, index) => {
@@ -202,13 +236,14 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         );
       }
     );
+
   }
 
   private addGenerators(): void {
     let movers$ = this.interval$
       .pipe(
         bufferCount(secondsToFrames(0.1, this.fps)),
-        take(4),
+        take(3),
         withLatestFrom(this.generators$),
         map(([_, generators]) => generators),
         map((generators) => buildItem(
@@ -221,7 +256,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     let flickers$ = this.interval$
       .pipe(
-        bufferCount(secondsToFrames(0.25, this.fps)),
+        bufferCount(secondsToFrames(0.05, this.fps)),
         // bufferCount(secondsToFrames(0.01, this.fps)),
         take(this.fps * 2),
         withLatestFrom(this.generators$),
@@ -231,31 +266,64 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         ))
       );
 
-    this.interval$
-      .pipe(
-        bufferCount(secondsToFrames(15, this.fps)),
-        startWith('init'),
-        switchMap(() => merge(
-          // movers$,
-            flickers$
+    // this.setupMidiInterators();
+
+    merge(
+      this.interval$
+        .pipe(
+          bufferCount(secondsToFrames(15, this.fps)),
+          startWith('init'),
+          switchMap(() => merge(
+              movers$
+              // flickers$
+            ).pipe(
+              map(x => ([x]))
+            )
           )
         ),
+      this.addGenerators$
+    )
+      .pipe(
         withLatestFrom(this.generators$),
         takeUntil(this.destroy$)
       )
-      .subscribe(([item, generators]) => {
+      .subscribe(([toAddItems, generators]) => {
 
         this.generators$.next([
           ...generators,
-          item
+          ...toAddItems
         ]);
 
-        item.lifetimeManager.kill$.pipe(
-          takeUntil(this.destroy$),
-          take(1)
-        ).subscribe(() => {
-          this.removeGenerator$.next(item);
+        //destroy toAddItems when killed
+        toAddItems.forEach(x => x.lifetimeManager.addOnDeath(() => this.removeGenerator$.next(x)));
+      });
+  }
+
+  private setupMidiInterators(): void {
+    from(WebMidi.enable({}))
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        // listen to midi input
+        WebMidi.inputs.forEach(input => {
+          // @ts-ignore
+          input.addListener('noteon', 'all', (e) => {
+            console.log(e);
+
+            // let item = buildFlicker(
+            //   this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
+            // );
+            // this.addGenerators$.next(
+            //   item
+            // )
+            //
+            // //destroy item when killed
+            // item.lifetimeManager.addOnDeath(() => this.removeGenerator$.next(item));
+          });
         });
+
+        // listen to midi events
       });
   }
 

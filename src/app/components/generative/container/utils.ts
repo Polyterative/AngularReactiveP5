@@ -312,7 +312,7 @@ export namespace Utils {
     );
 
     let finalCoordinate: Models.Coordinates = getRandomCoordinateGridPoint();
-    let animationDuration: number = lifeDuration / 1.25;
+    let animationDuration: number = lifeDuration / 1;
 
     // randomly choose between drawing a circle or a box or a line or a triangle
     let drawPositionedItem: Models.DrawPositionedItem = Math.random() < 0.5 ? drawCircle : Math.random() < 0.5
@@ -339,7 +339,7 @@ export namespace Utils {
     // chose a random x and y coordinate from coordinates grid
     const startingCoordinates = getRandomCoordinateGridPoint();
 
-    let lifeDuration = secondsToFrames(1, fps);
+    let lifeDuration = secondsToFrames(0.35, fps);
     let lifetimeManager: LifetimeManager = new LifetimeManager(
       currentTime$,
       currentTime$.value,

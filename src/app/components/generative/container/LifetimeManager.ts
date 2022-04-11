@@ -1,4 +1,4 @@
-import { BehaviorSubject, merge, Observable, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, merge, Observable, Subject, take, takeUntil } from 'rxjs';
 
 export class LifetimeManager {
 
@@ -6,6 +6,7 @@ export class LifetimeManager {
   remainingLifetimePercentage$: BehaviorSubject<number> = new BehaviorSubject(0);
   private readonly desiredLifeTime;
   kill$ = new Subject<void>();
+  private onDeath: (() => void)[] = [];
 
   constructor(
     currentTime$: BehaviorSubject<number>,
@@ -47,6 +48,12 @@ export class LifetimeManager {
       this.remainingLifetimePercentage$.next((remainingLifeTime / this.desiredLifeTime) * 100);
     });
 
+    this.kill$.pipe(take(1)).subscribe(() => this.onDeath.forEach(onDeath => onDeath()));
+
+  }
+
+  public addOnDeath(event: () => void) {
+    this.onDeath.push(event);
   }
 
   public getRemainingLifetime(): number {
