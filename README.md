@@ -1,6 +1,6 @@
 # What is this?
 
-This project is a friendly basic setup to work with https://github.com/processing/p5.js and rxjs in an angular environment.
+This project is a friendly ~basic~ (check the first commmits for "basic") setup to work with https://github.com/processing/p5.js and rxjs in an angular environment.
 
 Start exploring the code from here: https://github.com/Polyterative/AngularReactiveP5/blob/master/src/app/components/generative/container/container.component.ts
 
