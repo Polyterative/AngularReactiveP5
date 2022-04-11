@@ -290,7 +290,8 @@ export namespace Utils {
     currentTime$: BehaviorSubject<number>,
     fps: number,
     destroy$: Subject<void>,
-    otherCircles: ItemGenerator[]
+    otherCircles: ItemGenerator[],
+    duration: number
   ): ItemGenerator {
 
     // randomly choose number between 1x, 2x, 4x, 8x 16x of unit size
@@ -303,7 +304,7 @@ export namespace Utils {
     // chose a random x and y coordinate from coordinates grid
     const startingCoordinates = getRandomCoordinateGridPoint();
 
-    let lifeDuration = secondsToFrames(12, fps);
+    let lifeDuration = secondsToFrames(duration, fps);
     let lifetimeManager: LifetimeManager = new LifetimeManager(
       currentTime$,
       currentTime$.value,
@@ -311,7 +312,7 @@ export namespace Utils {
       destroy$
     );
 
-    let finalCoordinate: Models.Coordinates = getRandomCoordinateGridPoint();
+    let finalCoordinate: Models.Coordinates = startingCoordinates;
     let animationDuration: number = lifeDuration / 1;
 
     // randomly choose between drawing a circle or a box or a line or a triangle

@@ -3,6 +3,7 @@ import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil, withLatestFrom } from 'rxjs/operators';
 import { WebMidi } from 'webmidi';
+import { PolyCanvasRecorder } from './CanvasRecorder';
 import { Models } from './models';
 import { Utils } from './utils';
 import Coordinates = Models.Coordinates;
@@ -154,6 +155,20 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       this.generators$.next(generators);
     });
+
+    this.events.pInitialized$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+
+      let canvas: HTMLCanvasElement;
+      // get canvas element from html with id 'canvas'
+      canvas = document.getElementById('defaultCanvas0') as HTMLCanvasElement;
+
+      console.log(canvas);
+      let canvasRecorder = new PolyCanvasRecorder(canvas);
+
+      canvasRecorder.start();
+    });
   }
 
   private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
@@ -250,7 +265,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
           generators
             .filter(x => x.kind === 'item')
-            .map(x => x as Models.ItemGenerator)
+            .map(x => x as Models.ItemGenerator),
+          3
         ))
       );
 
@@ -271,11 +287,11 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     merge(
       this.interval$
         .pipe(
-          bufferCount(secondsToFrames(15, this.fps)),
+          bufferCount(secondsToFrames(4, this.fps)),
           startWith('init'),
           switchMap(() => merge(
-              movers$
-              // flickers$
+              // movers$
+              flickers$
             ).pipe(
               map(x => ([x]))
             )
