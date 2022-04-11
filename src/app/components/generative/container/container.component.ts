@@ -3,7 +3,6 @@ import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil, withLatestFrom } from 'rxjs/operators';
 import { WebMidi } from 'webmidi';
-import { PolyCanvasRecorder } from './CanvasRecorder';
 import { Models } from './models';
 import { Utils } from './utils';
 import Coordinates = Models.Coordinates;
@@ -28,10 +27,6 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   interval$ = interval(1000 / this.fps)
     .pipe(share());
 
-  private origin = {
-    x: 0,
-    y: 0
-  };
   private unit = 16;
 
   private generators$ = new BehaviorSubject<Models.PiGenerator[]>([]);
@@ -64,6 +59,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       )
       .subscribe(value => this.currentTime$.next(value));
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     this.events.pInitialized$
       .pipe(
         switchMap(() => this.currentTime$),
@@ -73,8 +69,27 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(([time, generators]) => {
-        // clear canvas
+        // clear webgl canvas
         p.background(0);
+        p.clear(0, 0, 0, 0);
+
+        // draw p5 frametime
+        p.fill(255);
+        p.textSize(32);
+
+        // rotate camera time function of sin
+        const sin = Math.sin(time / this.fps / 10);
+
+        // draw as text
+        p.text(`${ sin.toFixed(4) }`, 0, 0);
+        // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
+        let moved: number = (sin * p.height);
+        let lateralTranslate: number = moved / 2;
+
+        // default camera position
+        // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
+
+        p.camera(lateralTranslate, p.height / 2, p.height / 2, lateralTranslate, 0, 0, 0, 1, 0);
 
         let items: Models.ItemGenerator[] = generators
           .filter(x => x.kind === 'item')
@@ -85,19 +100,35 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         if (items.length === 3) { this.drawShapeBetweenItems(p, items);}
 
         this.renderGenerators(p, time, generators);
-
-        this.additionalRenderSteps(p, window, this.origin, this.getCurrentTime());
+        //
+        this.additionalRenderSteps(p, window, getOrigin(p), this.getCurrentTime());
 
       });
 
     let p: p5;
 
     p = new p5((p: p5) => {
+      let font: p5.Font;
+
+      p.preload = () => {
+        font = p.loadFont('assets/SpaceMono-Regular.ttf');
+      };
       p.setup = () => {
-        p.createCanvas(p.windowWidth, p.windowHeight)
-          .parent('canvas');
+        p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL).parent('canvas');
         p.noLoop();
         p.frameRate(this.fps);
+
+        // apply font
+        p.textFont(font);
+
+        // write text
+        p.fill(255);
+        p.textSize(144);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.text('PragmataPro 0', p.width / 2, p.height / 2);
+
+        // p.ortho()
+        // change p5 render depth
 
         this.events.pInitialized$.next({ p });
       };
@@ -138,7 +169,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
     this.generators$.next([
-      dotGridAlgo(this.coordinatesGrid$, this.unit, this.currentTime$, this.fps, this.destroy$)
+      dotGridAlgo(this.coordinatesGrid$.getValue(), this.unit, this.currentTime$, this.fps, this.destroy$)
     ]);
 
     // add generator every x seconds
@@ -164,10 +195,10 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       // get canvas element from html with id 'canvas'
       canvas = document.getElementById('defaultCanvas0') as HTMLCanvasElement;
 
-      console.log(canvas);
-      let canvasRecorder = new PolyCanvasRecorder(canvas);
+      // console.log(canvas);
+      // let canvasRecorder = new PolyCanvasRecorder(canvas);
 
-      canvasRecorder.start();
+      // canvasRecorder.start();
     });
   }
 
@@ -176,12 +207,18 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
 
     // draw all layers
+    p.translate(0, 0, this.unit * 4);
+
     for (let i = 0; i < highestLayerIndex; i++) {
+      p.translate(0, 0, i * this.unit * 4);
       let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
       let cleanFunctions: DrawFunction[] = drawFunctions.filter(x => x !== undefined) as DrawFunction[];
       //draw
       cleanFunctions.forEach(x => x(p, time));
+      p.translate(0, 0, -i * this.unit * 4);
     }
+
+    p.translate(0, 0, -this.unit * 4);
   }
 
   private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
@@ -272,7 +309,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     let flickers$ = this.interval$
       .pipe(
-        bufferCount(secondsToFrames(0.05, this.fps)),
+        bufferCount(secondsToFrames(0.1, this.fps)),
         // bufferCount(secondsToFrames(0.01, this.fps)),
         take(this.fps * 2),
         withLatestFrom(this.generators$),
@@ -290,8 +327,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           bufferCount(secondsToFrames(4, this.fps)),
           startWith('init'),
           switchMap(() => merge(
-              // movers$
-              flickers$
+              movers$
+              // flickers$
             ).pipe(
               map(x => ([x]))
             )
@@ -358,7 +395,11 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private additionalRenderSteps(p: p5, window: Window, origin: Coordinates, currentTime: number): void {
-    Utils.setMonospacedText(p);
+    Utils.resetTextColor(p);
+
+    let translateZ: number = this.unit * 16;
+    p.translate(0, 0, translateZ);
+    p.rotateX(p.radians(-90));
 
     let distance = 8;
 
@@ -370,24 +411,9 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     p.text(`fps: ${ this.fps }`, origin.x, origin.y + 4 * distance);
     p.text(`windowSize: ${ window.innerWidth }x${ window.innerHeight }`, origin.x, origin.y + 6 * distance);
 
-    // this.drawMouseToOrigin(p);
+    p.translate(0, 0, -translateZ);
+    p.rotateX(p.radians(90));
 
-  }
-
-  private drawMouseToOrigin(p: p5): void {
-    // draw mouse position coordinates following the mouse
-    p.textSize(16);
-
-    let textAbovePointer = `${ p.mouseX }, ${ p.mouseY }`;
-    // add distance to center rounded to 2 decimals
-    textAbovePointer += `, ${ Math.round(
-      p.dist(p.mouseX, p.mouseY, p.width / 2, p.height / 2) * 100) / 100 }`;
-
-    // write textAbovePointer in canvas in semi-transparent white
-    p.text(textAbovePointer, p.mouseX, p.mouseY - this.unit);
-
-    // draw line between mouse position and center of canvas
-    p.line(p.mouseX, p.mouseY, p.width / 2, p.height / 2);
   }
 
   ngOnInit(): void {

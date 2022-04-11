@@ -16,34 +16,43 @@ export namespace Utils {
   }
 
   export function dotGridAlgo(
-    gridPoints$: BehaviorSubject<CoordinateGridPoint[]>,
+    points: CoordinateGridPoint[],
     unit: number,
     currentTime$: BehaviorSubject<number>,
     fps: number,
     destroy$: Observable<void>
   ): DotGridGenerator {
+
+    unit = unit * 4;
+
     let mainRenderer: DrawFunction = (p, currentTime) => {
       p.stroke(255, 100);
       p.noFill();
 
       // draw grid as dots using coordinates
-      let points = gridPoints$.value;
+      function drawDots(): void {
+        for (let i = 0; i < points.length; i++) {
+          const gridElement = points[i];
 
-      for (let i = 0; i < points.length; i++) {
-        const gridElement = points[i];
-        const x = gridElement.x;
-        const y = gridElement.y;
+          p.point(gridElement.x, gridElement.y);
 
-        p.fill(255, 50);
-        p.point(x, y);
+          // p.gri
 
-        // add text above dots with xId and  yId
-        // p.textSize(8);
-        // p.text(`${ gridElement.xId }, ${ gridElement.yId }`, x, y - unit * 4);
+          // add text above dots with xId and  yId
+          // p.textSize(8);
+          // p.text(`${ gridElement.xId }, ${ gridElement.yId }`, x, y - unit * 4);
 
-        // draw lines between points
+          // draw lines between points
 
+        }
       }
+
+      // for (let i = 0; i < 2; i++) {
+      //   p.translate(0, 0, i * unit);
+      // p.fill(255, 50);
+      drawDots();
+      // p.translate(0, 0, -(i * unit));
+      // }
 
     };
     return {
@@ -78,17 +87,20 @@ export namespace Utils {
     const totalGridWidth = columns * distanceBetweenPoints;
     const totalGridHeight = rows * distanceBetweenPoints;
 
+    // origin is in the middle of the grid
+    const xOffset = origin.x - totalGridWidth / 2;
+    const yOffset = origin.y - totalGridHeight / 2;
+
     for (let i = 0; i < columns; i++) {
       for (let j = 0; j < rows; j++) {
-        const x = ((distanceBetweenPoints / 2) + origin.x - totalGridWidth + (totalGridWidth / 2)) + (i * distanceBetweenPoints);
-        const y = ((distanceBetweenPoints / 2) + origin.y - totalGridHeight + (totalGridHeight / 2)) + (j * distanceBetweenPoints);
-
+        const x = xOffset + i * distanceBetweenPoints;
+        const y = yOffset + j * distanceBetweenPoints;
         grid.push({
           x,
           y,
           xId: i,
           yId: j
-        });
+        })
       }
     }
 
@@ -120,7 +132,7 @@ export namespace Utils {
   }
 
   function drawRemainingLife(p: p5, remainingLife: number, coordinates: Coordinates, unit: number): void {
-    setMonospacedText(p);
+    resetTextColor(p);
     p.fill(255, 10);
     p.textSize(8);
     p.text(`${ Math.round(remainingLife) }`, coordinates.x, coordinates.y - unit * 2);
@@ -128,7 +140,7 @@ export namespace Utils {
 
   function drawUnitSize(p: p5, coordinate: Models.CoordinateGridPoint, unit: number): void {
     // draw unit size monospaced text, text in full opacity in the middle of the unit
-    setMonospacedText(p);
+    resetTextColor(p);
     p.textSize(8);
     p.text(`${ unit }`, coordinate.x, coordinate.y);
   }
@@ -154,10 +166,10 @@ export namespace Utils {
 
   }
 
-  export function setMonospacedText(p: p5): void {
+  export function resetTextColor(p: p5): void {
     p.stroke(255, 0);
     p.fill(255, 255);
-    p.textFont('monospace');
+    // p.textFont('monospace');
   }
 
   function weakFill(p: p5): void {
@@ -168,7 +180,7 @@ export namespace Utils {
   function drawPositionStatistics(p: p5, currentCoordinates: Models.Coordinates, finalCoordinate: Models.Coordinates, dimension: number): void {
 
     const angle = Math.atan2(finalCoordinate.y - currentCoordinates.y, finalCoordinate.x - currentCoordinates.x);
-    setMonospacedText(p);
+    resetTextColor(p);
     p.textSize(12);
     weakFill(p);
     p.text(
@@ -340,7 +352,7 @@ export namespace Utils {
     // chose a random x and y coordinate from coordinates grid
     const startingCoordinates = getRandomCoordinateGridPoint();
 
-    let lifeDuration = secondsToFrames(0.35, fps);
+    let lifeDuration = secondsToFrames(.5, fps);
     let lifetimeManager: LifetimeManager = new LifetimeManager(
       currentTime$,
       currentTime$.value,
@@ -363,9 +375,13 @@ export namespace Utils {
   }
 
   export function getOrigin(p: p5): { x: number, y: number } {
+    // return {
+    //   x: p.windowWidth / 2,
+    //   y: p.windowHeight / 2
+    // };
     return {
-      x: p.windowWidth / 2,
-      y: p.windowHeight / 2
+      x: 0,
+      y: 0
     };
   }
 }
