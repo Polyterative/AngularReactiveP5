@@ -3,6 +3,8 @@ import { Models } from './models';
 import Coordinates = Models.Coordinates;
 
 export class MovementManager {
+  // export class MovementManager implements Positionable{
+
   coordinates = {
     current: new BehaviorSubject<{ x: number, y: number }>({ x: 0, y: 0 }),
     starting: { x: 0, y: 0 },
@@ -54,7 +56,7 @@ export class MovementManager {
   }
 
   updatePosition(currentTime: number) {
-    // move from starting to final position considering duration with  easing from material design
+    // move from starting to final position considering duration with easing
     const x = this.coordinates.starting.x + (this.coordinates.final.x - this.coordinates.starting.x) * (currentTime - this.startTime) / (this.endTime - this.startTime);
     const y = this.coordinates.starting.y + (this.coordinates.final.y - this.coordinates.starting.y) * (currentTime - this.startTime) / (this.endTime - this.startTime);
 

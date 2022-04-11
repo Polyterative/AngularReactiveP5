@@ -10,12 +10,16 @@ export interface DotGridGenerator extends MyGenerator {
 
 export namespace Models {
 
+  export type DrawFunction = (p: p5, currentTime: number) => void;
+  export type DrawPositionedItem = (p: p5, coordinate: Coordinates, unit: number) => void;
+
   export interface MyGenerator {
     id: number;
     lifetimeManager: LifetimeManager;
     kind: 'item' | 'dotgrid';
 
-    draw(p: p5, time: number): void;
+    drawLayers: (DrawFunction)[];
+
   }
 
   export type PiGenerator = ItemGenerator | DotGridGenerator;
@@ -25,18 +29,18 @@ export namespace Models {
     id: number;
     lifetimeManager: LifetimeManager;
     movementManager: MovementManager;
-    draw: (p: p5, time: number) => void;
+    drawLayers: (DrawFunction)[] = [];
 
     constructor(
       id: number,
       lifetimeManager: LifetimeManager,
       movementManager: MovementManager,
-      draw: (p: p5, time: number) => void
+      drawLayers: (DrawFunction)[] = []
     ) {
       this.id = id;
       this.lifetimeManager = lifetimeManager;
       this.movementManager = movementManager;
-      this.draw = draw;
+      this.drawLayers = drawLayers;
     }
 
   }

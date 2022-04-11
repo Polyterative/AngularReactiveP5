@@ -54,7 +54,7 @@ export class LifetimeManager {
   }
 
   public getRemainingLifetimePercentage(): number {
-    return this.remainingLifetime$.getValue() / this.desiredLifeTime;
+    return this.remainingLifetime$.getValue() / this.desiredLifeTime * 100;
   }
 
 }

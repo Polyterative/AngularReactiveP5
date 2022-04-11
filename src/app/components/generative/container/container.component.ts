@@ -1,10 +1,13 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import p5 from 'p5';
 import { BehaviorSubject, bufferCount, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
-import { share, takeUntil, withLatestFrom } from 'rxjs/operators';
+import { map, share, takeUntil, withLatestFrom } from 'rxjs/operators';
 import { Models } from './models';
 import { Utils } from './utils';
-import buildItem = Utils.buildItem;
+import Coordinates = Models.Coordinates;
+import DrawFunction = Models.DrawFunction;
+import buildFlicker = Utils.buildFlicker;
+import buildItem = Utils.buildSlowMover;
 import createCoordinatesGrid = Utils.createCoordinatesGrid;
 import dotGridAlgo = Utils.dotGridAlgo;
 import getOrigin = Utils.getOrigin;
@@ -71,9 +74,21 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
         this.drawLinesBetweenItems(p, generators);
 
-        generators.forEach(g => g.draw(p, time));
+        generators.map(x => x.drawLayers);
+        // yield all generators with increasing array index
 
-        this.additionalRenderSteps(p);
+        // find the highest layer index
+        const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
+
+        // draw all layers
+        for (let i = 0; i < highestLayerIndex; i++) {
+          let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
+          let cleanFunctions: DrawFunction[] = drawFunctions.filter(x => x !== undefined) as DrawFunction[];
+          //draw
+          cleanFunctions.forEach(x => x(p, time));
+        }
+
+        this.additionalRenderSteps(p, window, this.origin, this.getCurrentTime());
 
       });
 
@@ -143,53 +158,46 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       .map(x => x as Models.ItemGenerator);
 
     //draw dots between items
-    items.forEach(
-      (item, index) => {
-        items.forEach(
-          (item2, index2) => {
-            if (index !== index2) {
-              // alpha inverse proportional to distance
-              let aCoord = item.movementManager.getCurrentCoordinates();
-              let ax: number = aCoord.x;
-              let ay: number = aCoord.y;
-              let bCoord = item2.movementManager.getCurrentCoordinates();
-              let bx: number = bCoord.x;
-              let by: number = bCoord.y;
+    items.forEach((item, index) => {
+      let aCord = item.movementManager.getCurrentCoordinates();
+      let ax: number = aCord.x;
+      let ay: number = aCord.y;
 
-              let distance: number = p.dist(ax, ay, bx, by);
-              // alpha proportional to distance (0-100) with further distance = less alpha
-              let alpha: number = p.map(distance, 0, p.width, 0, 100);
+      items.forEach((item2, index2) => {
+          if (index !== index2) {
+            // alpha inverse proportional to distance
 
-              // round alpha to nearest integer
-              alpha = Math.round(alpha);
+            let bCord = item2.movementManager.getCurrentCoordinates();
+            let bx: number = bCord.x;
+            let by: number = bCord.y;
 
-              // half alpha
-              alpha = alpha / 2;
+            let distance: number = p.dist(ax, ay, bx, by);
+            // alpha proportional to distance (0-100) with further distance = less alpha
+            let alpha: number = p.map(distance, 0, p.width, 0, 100);
 
-              // flicker alpha slightly
-              let life = item.lifetimeManager.remainingLifetimePercentage$.value;
-              if (life < 10 || life > 90) {
-                alpha = p.random(0, alpha);
-              }
-              // alpha = alpha + p.random(-10, 10);
+            // round alpha to nearest integer
+            alpha = Math.round(alpha);
 
-              p.stroke(255, alpha);
-              // write distance between items
-              p.line(
-                ax, ay, bx,
-                by
-              );
-              p.textSize(8);
-              p.text(Math.round(distance), (ax + bx) / 2,
-                (ay + by) / 2
-              );
+            // half alpha
+            alpha = alpha / 2;
 
-              p.strokeWeight(1);
-              p.line(
-                ax, ay, bx,
-                by
-              );
+            // flicker alpha slightly
+            let life = item.lifetimeManager.remainingLifetimePercentage$.value;
+            if (life < 10 || life > 90) {
+              alpha = p.random(0, alpha);
             }
+
+            p.stroke(255, alpha);
+            p.line(ax, ay, bx, by);
+
+            p.stroke(255, 0);
+            p.fill(255, alpha);
+
+            p.textSize(8);
+            // draw text in the middle of the line between items (not exactly in the middle) to make it easier to read the lines
+            p.text(Math.round(distance), (ax + bx) / 2, (ay + by) / 2);
+
+          }
           }
         );
       }
@@ -197,30 +205,48 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private addGenerators(): void {
-    this.interval$
+    let movers$ = this.interval$
       .pipe(
-        bufferCount(secondsToFrames(5, this.fps)),
-        startWith('init'),
-        switchMap(() => this.interval$
-          .pipe(
-            bufferCount(secondsToFrames(0.1, this.fps)),
-            take(4)
-          )
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(() => {
-        let myGenerators = this.generators$.value;
-
-        let item = buildItem(
+        bufferCount(secondsToFrames(0.1, this.fps)),
+        take(4),
+        withLatestFrom(this.generators$),
+        map(([_, generators]) => generators),
+        map((generators) => buildItem(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
-          myGenerators
+          generators
             .filter(x => x.kind === 'item')
             .map(x => x as Models.ItemGenerator)
-        );
+        ))
+      );
+
+    let flickers$ = this.interval$
+      .pipe(
+        bufferCount(secondsToFrames(0.25, this.fps)),
+        // bufferCount(secondsToFrames(0.01, this.fps)),
+        take(this.fps * 2),
+        withLatestFrom(this.generators$),
+        map(([_, generators]) => generators),
+        map((generators) => buildFlicker(
+          this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
+        ))
+      );
+
+    this.interval$
+      .pipe(
+        bufferCount(secondsToFrames(15, this.fps)),
+        startWith('init'),
+        switchMap(() => merge(
+          // movers$,
+            flickers$
+          )
+        ),
+        withLatestFrom(this.generators$),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(([item, generators]) => {
 
         this.generators$.next([
-          ...myGenerators,
+          ...generators,
           item
         ]);
 
@@ -247,15 +273,18 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private additionalRenderSteps(p: p5): void {
-    p.textFont('monospace');
-    p.stroke(255, 255 / 2);
-    p.textSize(12);
+  private additionalRenderSteps(p: p5, window: Window, origin: Coordinates, currentTime: number): void {
+    Utils.setMonospacedText(p);
 
-    // write "frame:" and "fps:" and "windowSize:" in p canvas in the top left corner one below each other with a gap of 2 unit pixels
-    p.text(`frame: ${ this.getCurrentTime() }`, this.origin.x, this.origin.y + 2 * this.unit);
-    p.text(`fps: ${ this.fps }`, this.origin.x, this.origin.y + 4 * this.unit);
-    p.text(`windowSize: ${ window.innerWidth }x${ window.innerHeight }`, this.origin.x, this.origin.y + 6 * this.unit);
+    let distance = 8;
+
+    p.stroke(255, 255 / 2);
+    p.textSize(16);
+
+    // write "frame:" and "fps:" and "windowSize:" in p canvas in the top left corner one below each other with a gap of 2 distance pixels
+    p.text(`frame: ${ currentTime }`, origin.x, origin.y + 2 * distance);
+    p.text(`fps: ${ this.fps }`, origin.x, origin.y + 4 * distance);
+    p.text(`windowSize: ${ window.innerWidth }x${ window.innerHeight }`, origin.x, origin.y + 6 * distance);
 
     // this.drawMouseToOrigin(p);
 
