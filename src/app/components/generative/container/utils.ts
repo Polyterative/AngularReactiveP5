@@ -324,7 +324,7 @@ export namespace Utils {
       destroy$
     );
 
-    let finalCoordinate: Models.Coordinates = startingCoordinates;
+    let finalCoordinate: Models.Coordinates = getRandomCoordinateGridPoint();
     let animationDuration: number = lifeDuration / 1;
 
     // randomly choose between drawing a circle or a box or a line or a triangle

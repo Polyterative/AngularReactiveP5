@@ -66,6 +66,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // filter(x => p.setupDone),
         withLatestFrom(this.generators$),
         // delay(250)
+        // throttleTime(1000/24),
         takeUntil(this.destroy$)
       )
       .subscribe(([time, generators]) => {
@@ -78,13 +79,13 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         p.textSize(32);
 
         // rotate camera time function of sin
-        const sin = Math.sin(time / this.fps / 10);
+        const sin = Math.sin(time / this.fps / 5);
 
         // draw as text
         p.text(`${ sin.toFixed(4) }`, 0, 0);
         // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
         let moved: number = (sin * p.height);
-        let lateralTranslate: number = moved / 2;
+        let lateralTranslate: number = moved / 4;
 
         // default camera position
         // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
@@ -294,7 +295,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   private addGenerators(): void {
     let movers$ = this.interval$
       .pipe(
-        bufferCount(secondsToFrames(0.1, this.fps)),
+        bufferCount(secondsToFrames(0.5, this.fps)),
         take(3),
         withLatestFrom(this.generators$),
         map(([_, generators]) => generators),
@@ -303,7 +304,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           generators
             .filter(x => x.kind === 'item')
             .map(x => x as Models.ItemGenerator),
-          3
+          7
         ))
       );
 
@@ -324,7 +325,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     merge(
       this.interval$
         .pipe(
-          bufferCount(secondsToFrames(4, this.fps)),
+          bufferCount(secondsToFrames(12, this.fps)),
           startWith('init'),
           switchMap(() => merge(
               movers$
@@ -397,7 +398,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   private additionalRenderSteps(p: p5, window: Window, origin: Coordinates, currentTime: number): void {
     Utils.resetTextColor(p);
 
-    let translateZ: number = this.unit * 16;
+    let translateZ: number = this.unit * 24;
     p.translate(0, 0, translateZ);
     p.rotateX(p.radians(-90));
 
