@@ -6,7 +6,7 @@ export class MovementManager {
   // export class MovementManager implements Positionable{
 
   coordinates = {
-    current: new BehaviorSubject<{ x: number, y: number }>({ x: 0, y: 0 }),
+    current: { x: 0, y: 0 },
     starting: { x: 0, y: 0 },
     final: { x: 0, y: 0 }
   }
@@ -57,8 +57,6 @@ export class MovementManager {
 
   updatePosition(currentTime: number) {
     // move from starting to final position considering duration with easing
-    const x = this.coordinates.starting.x + (this.coordinates.final.x - this.coordinates.starting.x) * (currentTime - this.startTime) / (this.endTime - this.startTime);
-    const y = this.coordinates.starting.y + (this.coordinates.final.y - this.coordinates.starting.y) * (currentTime - this.startTime) / (this.endTime - this.startTime);
 
     // apply easing
     const easing = (currentTime - this.startTime) / (this.endTime - this.startTime);
@@ -72,7 +70,9 @@ export class MovementManager {
     const easedX = this.coordinates.starting.x + (this.coordinates.final.x - this.coordinates.starting.x) * easingFunction(easing);
     const easedY = this.coordinates.starting.y + (this.coordinates.final.y - this.coordinates.starting.y) * easingFunction(easing);
 
-    this.coordinates.current.next({ x: easedX, y: easedY });
+    this.coordinates.current.x = easedX;
+    this.coordinates.current.y = easedY;
+
   }
 
   // currentCoordinates() :{ x: number; y: number }  {
@@ -81,8 +81,8 @@ export class MovementManager {
   // }
 
   getCurrentCoordinates(): Coordinates {
-    // console.log(this.coordinates.current.value);
-    return this.coordinates.current.value;
+
+    return this.coordinates.current;
   }
 
   private easeInOutQuad(number: number, number2: number, number3: number, number4: number): number {

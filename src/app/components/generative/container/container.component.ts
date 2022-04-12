@@ -3,16 +3,16 @@ import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil } from 'rxjs/operators';
 import { WebMidi } from 'webmidi';
+import { RenderAlgorithms } from '../RenderAlgos/RenderAlgorithms';
 import { Models } from './models';
 import { Utils } from './utils';
 import Coordinates = Models.Coordinates;
 import DrawFunction = Models.DrawFunction;
-import buildFlicker = Utils.buildFlicker;
-import buildItem = Utils.buildSlowMover;
 import createCoordinatesGrid = Utils.createCoordinatesGrid;
-import dotGridAlgo = Utils.dotGridAlgo;
 import getOrigin = Utils.getOrigin;
 import secondsToFrames = Utils.secondsToFrames;
+
+export interface Constants {units: { distanceBetweenLayers: number };}
 
 @Component({
   selector: 'app-container',
@@ -40,6 +40,12 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
+  private constants: Constants = {
+    units: {
+      distanceBetweenLayers: this.unit * 4
+    }
+  }
+
   private coordinatesGrid$ = new BehaviorSubject<Models.CoordinateGridPoint[]>([]);
 
   private events = {
@@ -47,11 +53,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     pInitialized$: new Subject<{ p: p5 }>()
   }
 
-  private constants = {
-    units: {
-      distanceBetweenLayes: this.unit * 4
-    }
-  }
+  private rendererBuilder: RenderAlgorithms.RendererBuilder = new RenderAlgorithms.RendererBuilder(this.currentTime$, this.constants);
 
   constructor() {
 
@@ -65,6 +67,18 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(value => this.currentTime$.next(value));
+
+    this.events.pInitialized$
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe(_ => {
+        if (this.rendererBuilder) {
+          let algo: RenderAlgorithms.DotGridGenerator = this.rendererBuilder.dotGridAlgo(
+            this.coordinatesGrid$.value, this.unit, this.fps, this.destroy$);
+          this.permanentRenderers.push(algo);
+        }
+      });
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     this.events.pInitialized$
@@ -102,6 +116,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // p.ortho()
         // change p5 render depth
 
+        this.rendererBuilder = new RenderAlgorithms.RendererBuilder(this.currentTime$, this.constants);
         this.events.pInitialized$.next({ p });
       };
     });
@@ -149,8 +164,6 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         p.remove();
       });
 
-    this.permanentRenderers.push(dotGridAlgo(this.coordinatesGrid$.getValue(), this.unit, this.currentTime$, this.fps, this.destroy$));
-
     // add generator every x seconds
     this.addGenerators();
 
@@ -193,9 +206,9 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.moveCamera(time, p);
 
-    this.drawLinesBetweenItems(p, this.generators);
+    // this.drawLinesBetweenItems(p, this.generators);
 
-    // if (this.generators.length === 3) { this.drawShapeBetweenItems(p, this.generators);}
+    if (this.generators.length === 3) { this.drawShapeBetweenItems(p, this.generators);}
 
     this.renderGenerators(
       p, time, [
@@ -224,23 +237,26 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
     // find the highest layer index
-    const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
+    let xTranslation: number = 0;
+    let yTranslation: number = 0;
+
+    const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), xTranslation);
 
     // draw all layers
-    p.translate(0, 0, this.constants.units.distanceBetweenLayes);
+    p.translate(xTranslation, yTranslation, this.constants.units.distanceBetweenLayers);
 
-    for (let i = 0; i < highestLayerIndex; i++) {
-      p.translate(0, 0, i * this.constants.units.distanceBetweenLayes);
+    let heightDisplacement: number;
+    for (let i = xTranslation; i < highestLayerIndex; i++) {
+      heightDisplacement = i * this.constants.units.distanceBetweenLayers;
+      p.translate(xTranslation, yTranslation, heightDisplacement);
 
       let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
       drawFunctions.forEach(draw => { if (draw) {draw(p, time);} });
 
-      console.log(drawFunctions.filter(x => !!x).length);
-
-      p.translate(0, 0, -i * this.constants.units.distanceBetweenLayes);
+      p.translate(xTranslation, yTranslation, -heightDisplacement);
     }
 
-    p.translate(0, 0, -(this.constants.units.distanceBetweenLayes));
+    p.translate(xTranslation, yTranslation, -(this.constants.units.distanceBetweenLayers));
   }
 
   private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
@@ -318,7 +334,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(
         bufferCount(secondsToFrames(0.5, this.fps)),
         take(3),
-        map((_) => buildItem(
+        map((_) => this.rendererBuilder.buildSlowMover(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
           this.generators
             .filter(x => x.kind === 'item')
@@ -332,7 +348,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         bufferCount(secondsToFrames(0.075, this.fps)),
         // bufferCount(secondsToFrames(0.01, this.fps)),
         take(this.fps * 2),
-        map((_) => buildFlicker(
+        map((_) => this.rendererBuilder.buildFlicker(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
         ))
       );
@@ -345,7 +361,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           bufferCount(secondsToFrames(12, this.fps)),
           startWith('init'),
           switchMap(() => merge(
-              // movers$
+              movers$,
               flickers$
             ).pipe(
               map(x => ([x]))

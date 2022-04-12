@@ -1,12 +1,8 @@
 import p5 from 'p5';
 import { BehaviorSubject } from 'rxjs';
+import { RenderAlgorithms } from '../RenderAlgos/RenderAlgorithms';
 import { LifetimeManager } from './LifetimeManager';
 import { MovementManager } from './MovementManager';
-import MyGenerator = Models.MyGenerator;
-
-export interface DotGridGenerator extends MyGenerator {
-  kind: 'dotgrid';
-}
 
 export namespace Models {
 
@@ -22,7 +18,7 @@ export namespace Models {
 
   }
 
-  export type PiGenerator = ItemGenerator | DotGridGenerator;
+  export type PiGenerator = ItemGenerator | RenderAlgorithms.DotGridGenerator;
 
   export class ItemGenerator implements MyGenerator {
     kind: 'item' = 'item';
