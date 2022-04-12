@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
-import { map, share, takeUntil, withLatestFrom } from 'rxjs/operators';
+import { map, share, takeUntil } from 'rxjs/operators';
 import { WebMidi } from 'webmidi';
 import { Models } from './models';
 import { Utils } from './utils';
@@ -29,9 +29,10 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private unit = 16;
 
-  private generators$ = new BehaviorSubject<Models.PiGenerator[]>([]);
+  private generators: Models.ItemGenerator[] = [];
+  private permanentRenderers: Models.PiGenerator[] = [];
 
-  private addGenerators$ = new Subject<Models.PiGenerator[]>();
+  private addItemGenerators$ = new Subject<Models.ItemGenerator[]>();
 
   private removeGenerator$ = new Subject<Models.PiGenerator>();
 
@@ -44,6 +45,12 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   private events = {
     windowResized$: new Subject<{ width: number, height: number }>(),
     pInitialized$: new Subject<{ p: p5 }>()
+  }
+
+  private constants = {
+    units: {
+      distanceBetweenLayes: this.unit * 4
+    }
   }
 
   constructor() {
@@ -64,47 +71,11 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(
         switchMap(() => this.currentTime$),
         // filter(x => p.setupDone),
-        withLatestFrom(this.generators$),
         // delay(250)
         // throttleTime(1000/24),
         takeUntil(this.destroy$)
       )
-      .subscribe(([time, generators]) => {
-        // clear webgl canvas
-        p.background(0);
-        p.clear(0, 0, 0, 0);
-
-        // draw p5 frametime
-        p.fill(255);
-        p.textSize(32);
-
-        // rotate camera time function of sin
-        const sin = Math.sin(time / this.fps / 5);
-
-        // draw as text
-        p.text(`${ sin.toFixed(4) }`, 0, 0);
-        // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
-        let moved: number = (sin * p.height);
-        let lateralTranslate: number = moved / 4;
-
-        // default camera position
-        // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
-
-        p.camera(lateralTranslate, p.height / 2, p.height / 2, lateralTranslate, 0, 0, 0, 1, 0);
-
-        let items: Models.ItemGenerator[] = generators
-          .filter(x => x.kind === 'item')
-          .map(x => x as Models.ItemGenerator);
-
-        this.drawLinesBetweenItems(p, generators, items);
-
-        if (items.length === 3) { this.drawShapeBetweenItems(p, items);}
-
-        this.renderGenerators(p, time, generators);
-        //
-        this.additionalRenderSteps(p, window, getOrigin(p), this.getCurrentTime());
-
-      });
+      .subscribe((time) => this.renderFrame(p, time));
 
     let p: p5;
 
@@ -141,10 +112,19 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     // kill generators on window resize
     this.events.windowResized$
       .pipe(
-        withLatestFrom(this.generators$),
         takeUntil(this.destroy$)
       )
-      .subscribe(([_, generators]) => generators.forEach(generator => generator.lifetimeManager.kill$.next()));
+      .subscribe((_) => this.generators.forEach(generator => generator.lifetimeManager.kill$.next()));
+
+    // clear generators on window resize
+    this.events.windowResized$
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe((_) => {
+        this.generators = [];
+        this.permanentRenderers = [];
+      });
 
     // resize canvas on window resize
     this.events.windowResized$.pipe(
@@ -169,9 +149,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         p.remove();
       });
 
-    this.generators$.next([
-      dotGridAlgo(this.coordinatesGrid$.getValue(), this.unit, this.currentTime$, this.fps, this.destroy$)
-    ]);
+    this.permanentRenderers.push(dotGridAlgo(this.coordinatesGrid$.getValue(), this.unit, this.currentTime$, this.fps, this.destroy$));
 
     // add generator every x seconds
     this.addGenerators();
@@ -179,13 +157,13 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     this.removeGenerator$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(generator => {
-      let generators: Models.PiGenerator[] = this.generators$.value;
+      let generators: Models.PiGenerator[] = this.generators;
+
       // remove generator from array dynamic programming style so it's faster
       let index = generators.findIndex(x => x.id === generator.id);
       if (index > -1) {
         generators.splice(index, 1);
       }
-      this.generators$.next(generators);
     });
 
     this.events.pInitialized$.pipe(
@@ -203,23 +181,66 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  private renderFrame(p: p5, time: number): void {
+    // clear webgl canvas
+
+    p.background(0);
+    p.clear(0, 0, 0, 0);
+
+    // draw p5 frametime
+    p.fill(255);
+    p.textSize(32);
+
+    this.moveCamera(time, p);
+
+    this.drawLinesBetweenItems(p, this.generators);
+
+    // if (this.generators.length === 3) { this.drawShapeBetweenItems(p, this.generators);}
+
+    this.renderGenerators(
+      p, time, [
+        ...this.generators,
+        ...this.permanentRenderers
+      ]);
+    //
+    this.additionalRenderSteps(p, window, getOrigin(p), this.getCurrentTime());
+  }
+
+  private moveCamera(time: number, p: p5): void {
+    // rotate camera time function of sin
+    const sin = Math.sin(time / this.fps / 5);
+
+    // draw as text
+    p.text(`${ sin.toFixed(4) }`, 0, 0);
+    // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
+    let moved: number = (sin * p.height);
+    let lateralTranslate: number = moved / 4;
+
+    // default camera position
+    // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
+
+    p.camera(lateralTranslate, p.height / 2, p.height / 2, lateralTranslate, 0, 0, 0, 1, 0);
+  }
+
   private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
     // find the highest layer index
     const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), 0);
 
     // draw all layers
-    p.translate(0, 0, this.unit * 4);
+    p.translate(0, 0, this.constants.units.distanceBetweenLayes);
 
     for (let i = 0; i < highestLayerIndex; i++) {
-      p.translate(0, 0, i * this.unit * 4);
+      p.translate(0, 0, i * this.constants.units.distanceBetweenLayes);
+
       let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
-      let cleanFunctions: DrawFunction[] = drawFunctions.filter(x => x !== undefined) as DrawFunction[];
-      //draw
-      cleanFunctions.forEach(x => x(p, time));
-      p.translate(0, 0, -i * this.unit * 4);
+      drawFunctions.forEach(draw => { if (draw) {draw(p, time);} });
+
+      console.log(drawFunctions.filter(x => !!x).length);
+
+      p.translate(0, 0, -i * this.constants.units.distanceBetweenLayes);
     }
 
-    p.translate(0, 0, -this.unit * 4);
+    p.translate(0, 0, -(this.constants.units.distanceBetweenLayes));
   }
 
   private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
@@ -242,7 +263,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     p.endShape(p.CLOSE);
   }
 
-  private drawLinesBetweenItems(p: p5, myGenerators: Models.PiGenerator[], items: Models.ItemGenerator[]): void {
+  private drawLinesBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
 
     //draw dots between items
     items.forEach((item, index) => {
@@ -297,11 +318,9 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(
         bufferCount(secondsToFrames(0.5, this.fps)),
         take(3),
-        withLatestFrom(this.generators$),
-        map(([_, generators]) => generators),
-        map((generators) => buildItem(
+        map((_) => buildItem(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
-          generators
+          this.generators
             .filter(x => x.kind === 'item')
             .map(x => x as Models.ItemGenerator),
           7
@@ -310,12 +329,10 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
     let flickers$ = this.interval$
       .pipe(
-        bufferCount(secondsToFrames(0.1, this.fps)),
+        bufferCount(secondsToFrames(0.075, this.fps)),
         // bufferCount(secondsToFrames(0.01, this.fps)),
         take(this.fps * 2),
-        withLatestFrom(this.generators$),
-        map(([_, generators]) => generators),
-        map((generators) => buildFlicker(
+        map((_) => buildFlicker(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
         ))
       );
@@ -328,25 +345,21 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
           bufferCount(secondsToFrames(12, this.fps)),
           startWith('init'),
           switchMap(() => merge(
-              movers$
-              // flickers$
+              // movers$
+              flickers$
             ).pipe(
               map(x => ([x]))
             )
           )
         ),
-      this.addGenerators$
+      this.addItemGenerators$
     )
       .pipe(
-        withLatestFrom(this.generators$),
         takeUntil(this.destroy$)
       )
-      .subscribe(([toAddItems, generators]) => {
+      .subscribe((toAddItems) => {
 
-        this.generators$.next([
-          ...generators,
-          ...toAddItems
-        ]);
+        this.generators.push(...toAddItems);
 
         //destroy toAddItems when killed
         toAddItems.forEach(x => x.lifetimeManager.addOnDeath(() => this.removeGenerator$.next(x)));
@@ -368,7 +381,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
             // let item = buildFlicker(
             //   this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
             // );
-            // this.addGenerators$.next(
+            // this.addItemGenerators$.next(
             //   item
             // )
             //
