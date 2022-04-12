@@ -74,8 +74,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       )
       .subscribe(_ => {
         if (this.rendererBuilder) {
-          let algo: RenderAlgorithms.DotGridGenerator = this.rendererBuilder.dotGridAlgo(
-            this.coordinatesGrid$.value, this.unit, this.fps, this.destroy$);
+          let algo: RenderAlgorithms.DotGridGenerator = this.rendererBuilder.dotGridDelimiter(
+            this.coordinatesGrid$.value, this.destroy$);
           this.permanentRenderers.push(algo);
         }
       });
@@ -204,6 +204,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     p.fill(255);
     p.textSize(32);
 
+    // this.defaultCamera(time, p);
     this.moveCamera(time, p);
 
     // this.drawLinesBetweenItems(p, this.generators);
@@ -233,6 +234,12 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     // p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6), 0, 0, 0, 0, 1, 0);
 
     p.camera(lateralTranslate, p.height / 2, p.height / 2, lateralTranslate, 0, 0, 0, 1, 0);
+  }
+
+  private defaultCamera(time: number, p: p5): void {
+    // rotate camera time function of sin
+
+    p.camera(0, 0, (p.height / 2) / p.tan(3.14 / 6) * 1.25, 0, 0, 0, 0, 1, 0);
   }
 
   private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {

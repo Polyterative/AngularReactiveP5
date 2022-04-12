@@ -69,4 +69,23 @@ export namespace Utils {
       y: 0
     };
   }
+
+  /**
+   * Returns a random number between min (inclusive) and max (exclusive)
+   * probability is a number between 0 and 100
+   * @param currentTime
+   * @param min minimum number
+   * @param max maximum number
+   * @param probability probability of returning a number between min and max (inclusive) (0-100)
+   * @returns random number between min and max
+   */
+  export function flicker(currentTime: number, min: number, max: number, probability: number): number {
+    // use time as sinusoidal function to create flicker
+    const sinusoidalFunction = Math.sin(currentTime / 100);
+    // add some randomness to sinusoidal function
+    const randomness = Math.random() * 0.15;
+    const flicker = sinusoidalFunction + randomness;
+    // return random number between min and max
+    return min + (max - min) * flicker;
+  }
 }

@@ -82,6 +82,58 @@ export namespace RenderAlgorithms {
 
     }
 
+    dotGridDelimiter(
+      points: CoordinateGridPoint[],
+      destroy$: Observable<void>
+    ): DotGridGenerator {
+
+      let unit = this.constants.units.distanceBetweenLayers * 8;
+
+      //first point
+      let xfirstPoint = points[0];
+      // last point of first line if the one with the highest  xId
+      let xlastPoint = points.reduce((acc, curr) => curr.xId > acc.xId ? curr : acc);
+      // first point of the last line if the one with the highest yId
+      let yFirstPoint = points.reduce((acc, curr) => curr.xId == xfirstPoint.xId && curr.yId > curr.yId ? curr : acc)
+      // last point
+      let yLastPoint = points[points.length - 1];
+
+      let alpha: number = 244 / 20;
+
+      function drawPerimeter(p: p5): void {
+        p.rect(xfirstPoint.x, xfirstPoint.y, xlastPoint.x - xfirstPoint.x, yLastPoint.y - xfirstPoint.y);
+      }
+
+      let mainRenderer: DrawFunction = (p, currentTime) => {
+
+        // draw line across the outermost points of the grid
+        p.stroke(255, alpha);
+        p.noFill();
+
+        // flicker alpha 5% of the time slowly as function of time
+
+        alpha = Utils.flicker(currentTime, 0, 255 / 10, 5);
+
+        // draw again with higher z four times
+        drawPerimeter(p);
+        p.translate(0, 0, unit);
+        drawPerimeter(p);
+        p.translate(0, 0, -unit);
+
+      };
+      return {
+        drawLayers: [mainRenderer],
+        lifetimeManager: new LifetimeManager(
+          this.currentTime$,
+          Infinity,
+          destroy$
+        ),
+        id: Utils.buildId(this.currentTime$.value),
+        kind: 'dotgrid'
+      };
+
+    }
+
     buildFlicker(
       availablePoints: CoordinateGridPoint[],
       unit: number,
