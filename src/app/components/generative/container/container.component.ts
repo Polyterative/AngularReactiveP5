@@ -54,7 +54,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     pInitialized$: new Subject<{ p: p5 }>()
   }
 
-  private rendererContainer: RendererContainer = new RendererContainer(this.currentTime$, this.constants);
+  private renderers: RendererContainer = new RendererContainer(this.currentTime$, this.constants);
 
   constructor() {
 
@@ -74,8 +74,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(_ => {
-        if (this.rendererContainer) {
-          let algo: DotGridGenerator = this.rendererContainer.dotGridAlgo.gridDelimiter(
+        if (this.renderers) {
+          let algo: DotGridGenerator = this.renderers.dotGridAlgo.gridDelimiter(
             this.coordinatesGrid$.value, this.destroy$);
           this.permanentRenderers.push(algo);
         }
@@ -117,7 +117,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         // p.ortho()
         // change p5 render depth
 
-        this.rendererContainer = new RendererContainer(this.currentTime$, this.constants);
+        this.renderers = new RendererContainer(this.currentTime$, this.constants);
         this.events.pInitialized$.next({ p });
       };
     });
@@ -351,7 +351,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(
         bufferCount(secondsToFrames(0.5, this.fps)),
         take(3),
-        map((_) => this.rendererContainer.itemAlgo.buildFastStander(
+        map((_) => this.renderers.itemAlgo.buildFastStander(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$,
           this.generators
             .filter(x => x.kind === 'item')
@@ -365,7 +365,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         bufferCount(secondsToFrames(0.14, this.fps)),
         // bufferCount(secondsToFrames(0.01, this.fps)),
         // take(this.fps * 2),
-        map((_) => this.rendererContainer.itemAlgo.buildFlicker(
+        map((_) => this.renderers.itemAlgo.buildFlicker(
           this.coordinatesGrid$.value, this.unit, this.currentTime$, this.fps, this.destroy$
         ))
       );
