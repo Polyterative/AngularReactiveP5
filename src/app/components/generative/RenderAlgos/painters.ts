@@ -14,6 +14,12 @@ export namespace Painters {
     p.line(coordinate.x + unit, coordinate.y - unit, coordinate.x - unit, coordinate.y + unit);
   }
 
+  export function drawSmallX(p: p5, coordinate: Coordinates, unit: number): void {
+    unit = unit / 4;
+    p.line(coordinate.x - unit, coordinate.y - unit, coordinate.x + unit, coordinate.y + unit);
+    p.line(coordinate.x + unit, coordinate.y - unit, coordinate.x - unit, coordinate.y + unit);
+  }
+
   export function drawTriangle(p: p5, coordinate: Coordinates, unit: number): void {
     // equilateral triangle pointing down
 
@@ -69,7 +75,7 @@ export namespace Painters {
   }
 
   export function weakFill(p: p5): void {
-    p.fill(255, 255 / 10);
+    p.fill(255, 255 / 5);
   }
 
 // draw position statistics as text in 3 lines

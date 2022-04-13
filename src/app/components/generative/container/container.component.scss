@@ -1,3 +1,16 @@
 .disableScrollbar {
   overflow: hidden !important;
+
+
+}
+
+#canvas, canvas {
+  display:    block;
+  // remove scrollbars
+  overflow:   hidden;
+  // remove border
+  border:     0;
+  // remove background color
+  background: transparent;
+
 }
