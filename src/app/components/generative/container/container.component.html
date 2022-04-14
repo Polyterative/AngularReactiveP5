@@ -1,14 +1,14 @@
 <ngt-canvas
     (created)="$event.camera.lookAt(0, 0, 0)"
     [shadows]="true"
-    [camera]="{ fov: 35, near: 0.25, far: 1000, position: [-5, 5, 20] }"
+    [camera]="{ fov: 35, near: 0.25, far: 1000, position: [-25, 25, 25] }"
     [scene]="{ background: '#0e0e0e' | color, fog: ['#e0e0e0', 20, 100] | fog }"
     [size]="{ width: window.innerWidth, height: window.innerHeight }"
-
 >
   <ngt-stats></ngt-stats>
   <ngt-soba-orbit-controls></ngt-soba-orbit-controls>
   <ngt-soba-stars></ngt-soba-stars>
+  <ngt-ambient-light [color]="'#ffffff' | color"></ngt-ambient-light>
   <ngt-grid-helper
       #ngtGridHelper="ngtGridHelper"
       (ready)="onGridHelperReady(ngtGridHelper.helper)"
@@ -17,9 +17,7 @@
   ></ngt-grid-helper>
   <ngt-mesh [position]="[0,0,0]">
     <ngt-box-geometry></ngt-box-geometry>
-    <ngt-mesh-phong-material
-        [parameters]='{color: "#f3f3f3", wireframe: true}'
-    ></ngt-mesh-phong-material>
+    <ngt-mesh-physical-material [parameters]="{ color: '#ff0000' | color }"></ngt-mesh-physical-material>
   </ngt-mesh>
 
 </ngt-canvas>
