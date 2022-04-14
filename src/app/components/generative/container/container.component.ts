@@ -2,8 +2,8 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } 
 import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil } from 'rxjs/operators';
+import { Color, GridHelper, Material, Object3D, Scene } from 'three';
 import { WebMidi } from 'webmidi';
-import { DotGridGenerator } from '../RenderAlgos/DotGridAlgo';
 import { RendererContainer } from '../RenderAlgos/RendererContainer';
 import { Models } from './models';
 import { Utils } from './utils';
@@ -47,11 +47,14 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // @ViewChild(`canvas`)
+  // private canvas: ElementRef;
+
   private coordinatesGrid$ = new BehaviorSubject<Models.CoordinateGridPoint[]>([]);
 
   private events = {
     windowResized$: new Subject<{ width: number, height: number }>(),
-    pInitialized$: new Subject<{ p: p5 }>()
+    threeInitialized$: new Subject<{ p: p5 }>()
   }
 
   private renderers: RendererContainer = new RendererContainer(this.currentTime$, this.constants);
@@ -62,163 +65,220 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
 
-    this.events.pInitialized$
+    // // converting p5 code to three.js
+    // let threejs: Scene = new Scene()
+    //
+    // let camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+    //
+    // let renderer = new WebGLRenderer({
+    //   antialias: true,
+    //   alpha: true
+    // });
+    //
+    // // replace 'canvas' in dom with three.js renderer
+    // renderer.setSize(window.innerWidth, window.innerHeight);
+    // renderer.setClearColor(0x000000, 0);
+    //
+    // // add three.js renderer to child element
+    // this.canvas.nativeElement.appendChild(renderer.domElement);
+
+    // const scene = new Scene();
+    // const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    //
+    // const renderer = new WebGLRenderer();
+    // renderer.setSize(window.innerWidth, window.innerHeight);
+    // document.body.appendChild(renderer.domElement);
+    //
+    // let geometry = new BoxGeometry(1, 1, 1);
+    //
+    // const material = new MeshBasicMaterial({ color: 0x00ff00 });
+    //
+    // const cube = new Mesh(geometry, material);
+    // scene.add(cube);
+    //
+    // camera.position.z = 5;
+    //
+    // renderer.render(scene, camera);
+
+    // draw debug fps in three.js
+
+    // const animate = function () {
+    //   requestAnimationFrame(animate);
+    //
+    //   cube.rotation.x += 0.01;
+    //   cube.rotation.y += 0.01;
+    //
+    //   renderer.render(scene, camera);
+    // };
+    //
+    // animate();
+
+    //
+    //
+    this.events.threeInitialized$
       .pipe(
         switchMap(x => this.interval$),
         takeUntil(this.destroy$)
       )
       .subscribe(value => this.currentTime$.next(value));
-
-    this.events.pInitialized$
-      .pipe(
-        takeUntil(this.destroy$)
-      )
-      .subscribe(_ => {
-        if (this.renderers) {
-          let algo: DotGridGenerator = this.renderers.dotGridAlgo.gridDelimiter(
-            this.coordinatesGrid$.value, this.destroy$);
-          this.permanentRenderers.push(algo);
-        }
-      });
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    this.events.pInitialized$
-      .pipe(
-        switchMap(() => this.currentTime$),
-        // filter(x => p.setupDone),
-        // delay(250)
-        // throttleTime(1000/24),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((time) => this.renderFrame(p, time));
-
-    let p: p5;
-
-    p = new p5((p: p5) => {
-      let font: p5.Font;
-
-      p.preload = () => {
-        font = p.loadFont('assets/SpaceMono-Regular.ttf');
-      };
-      p.setup = () => {
-        p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL).parent('canvas');
-        // p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
-        p.noLoop();
-        p.frameRate(this.fps);
-
-        // apply font
-        p.textFont(font);
-
-        //
-        // p.orbitControl();
-
-        // this.defaultCamera(p)
-
-        // p.ortho()
-        // change p5 render depth
-
-        this.renderers = new RendererContainer(this.currentTime$, this.constants);
-        this.events.pInitialized$.next({ p });
-      };
-    });
-
-    // resize canvas on window resize
-    p.windowResized = () => this.events.windowResized$.next({ width: p.windowWidth, height: p.windowHeight });
-
-    // kill generators on window resize
-    this.events.windowResized$
-      .pipe(
-        takeUntil(this.destroy$)
-      )
-      .subscribe((_) => this.generators.forEach(generator => generator.lifetimeManager.kill$.next()));
-
-    // clear generators on window resize
-    this.events.windowResized$
-      .pipe(
-        takeUntil(this.destroy$)
-      )
-      .subscribe((_) => {
-        this.generators = [];
-        this.permanentRenderers = [];
-      });
-
-    // resize canvas on window resize
-    this.events.windowResized$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(({ width, height }) => p.resizeCanvas(width, height));
-
-    // update coordinates grid on window resize and init
-    merge(
-      this.events.pInitialized$,
-      this.events.windowResized$
-    )
-      .pipe(
-        startWith('init'),
-        takeUntil(this.destroy$)
-      ).subscribe(() => {
-      this.coordinatesGrid$.next(this.buildCoordinatesGrid(p));
-    });
-
-    this.destroy$
-      .pipe(take(1))
-      .subscribe(() => {
-        p.remove();
-      });
-
-    // add generator every x seconds
-    this.addGenerators();
-
-    this.removeGenerator$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(generator => {
-      let generators: Models.PiGenerator[] = this.generators;
-
-      // remove generator from array dynamic programming style so it's faster
-      let index = generators.findIndex(x => x.id === generator.id);
-      if (index > -1) {
-        generators.splice(index, 1);
-      }
-    });
-
-    this.events.pInitialized$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(() => {
-
-      let canvas: HTMLCanvasElement;
-      // get canvas element from html with id 'canvas'
-      canvas = document.getElementById('defaultCanvas0') as HTMLCanvasElement;
-
-      // console.log(canvas);
-      // let canvasRecorder = new PolyCanvasRecorder(canvas);
-
-      // canvasRecorder.start();
-    });
+    //
+    // this.events.threeInitialized$
+    //   .pipe(
+    //     takeUntil(this.destroy$)
+    //   )
+    //   .subscribe(_ => {
+    //     if (this.renderers) {
+    //       let algo: DotGridGenerator = this.renderers.dotGridAlgo.gridDelimiter(
+    //         this.coordinatesGrid$.value, this.destroy$);
+    //       this.permanentRenderers.push(algo);
+    //     }
+    //   });
+    //
+    // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // this.events.threeInitialized$
+    //   .pipe(
+    //     switchMap(() => this.currentTime$),
+    //     // filter(x => p.setupDone),
+    //     // delay(250)
+    //     // throttleTime(1000/24),
+    //     takeUntil(this.destroy$)
+    //   )
+    //   .subscribe((time) => this.renderFrame(scene, time));
+    //
+    //
+    // p = new p5((p: p5) => {
+    //   let font: p5.Font;
+    //
+    //   p.preload = () => {
+    //     font = p.loadFont('assets/SpaceMono-Regular.ttf');
+    //   };
+    //   p.setup = () => {
+    //     p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL).parent('canvas');
+    //     // p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
+    //     p.noLoop();
+    //     p.frameRate(this.fps);
+    //
+    //     // apply font
+    //     p.textFont(font);
+    //
+    //     //
+    //     // p.orbitControl();
+    //
+    //     // this.defaultCamera(p)
+    //
+    //     // p.ortho()
+    //     // change p5 render depth
+    //
+    //     this.renderers = new RendererContainer(this.currentTime$, this.constants);
+    //     this.events.threeInitialized$.next({ p });
+    //   };
+    // });
+    //
+    // // resize canvas on window resize
+    // p.windowResized = () => this.events.windowResized$.next({ width: p.windowWidth, height: p.windowHeight });
+    //
+    // // kill generators on window resize
+    // this.events.windowResized$
+    //   .pipe(
+    //     takeUntil(this.destroy$)
+    //   )
+    //   .subscribe((_) => this.generators.forEach(generator => generator.lifetimeManager.kill$.next()));
+    //
+    // // clear generators on window resize
+    // this.events.windowResized$
+    //   .pipe(
+    //     takeUntil(this.destroy$)
+    //   )
+    //   .subscribe((_) => {
+    //     this.generators = [];
+    //     this.permanentRenderers = [];
+    //   });
+    //
+    // // resize canvas on window resize
+    // this.events.windowResized$.pipe(
+    //   takeUntil(this.destroy$)
+    // ).subscribe(({ width, height }) => p.resizeCanvas(width, height));
+    //
+    // // update coordinates grid on window resize and init
+    // merge(
+    //   this.events.threeInitialized$,
+    //   this.events.windowResized$
+    // )
+    //   .pipe(
+    //     startWith('init'),
+    //     takeUntil(this.destroy$)
+    //   ).subscribe(() => {
+    //   this.coordinatesGrid$.next(this.buildCoordinatesGrid(p));
+    // });
+    //
+    // this.destroy$
+    //   .pipe(take(1))
+    //   .subscribe(() => {
+    //     p.remove();
+    //   });
+    //
+    // // add generator every x seconds
+    // this.addGenerators();
+    //
+    // this.removeGenerator$.pipe(
+    //   takeUntil(this.destroy$)
+    // ).subscribe(generator => {
+    //   let generators: Models.PiGenerator[] = this.generators;
+    //
+    //   // remove generator from array dynamic programming style so it's faster
+    //   let index = generators.findIndex(x => x.id === generator.id);
+    //   if (index > -1) {
+    //     generators.splice(index, 1);
+    //   }
+    // });
+    //
+    // this.events.threeInitialized$.pipe(
+    //   takeUntil(this.destroy$)
+    // ).subscribe(() => {
+    //
+    //   let canvas: HTMLCanvasElement;
+    //   // get canvas element from html with id 'canvas'
+    //   canvas = document.getElementById('defaultCanvas0') as HTMLCanvasElement;
+    //
+    //   // console.log(canvas);
+    //   // let canvasRecorder = new PolyCanvasRecorder(canvas);
+    //
+    //   // canvasRecorder.start();
+    // });
   }
 
-  private renderFrame(p: p5, time: number): void {
+  private renderFrame(scene: Scene, time: number): void {
     // clear webgl canvas
 
-    p.background(0);
-    p.clear(0, 0, 0, 0);
+    scene.background = new Color(0x000000);
 
-    // draw p5 frametime
-    p.fill(255);
-    p.textSize(32);
+    // draw text with time in threejs scene
+    let timeObj: Object3D = new Object3D();
+    timeObj.position.set(0, 0, 0);
+    timeObj.scale.set(0.1, 0.1, 0.1);
+    timeObj.rotation.set(0, 0, 0);
+    timeObj.name = 'time';
+    scene.add(timeObj);
 
-    // this.defaultCamera(p);
-    this.moveCamera(time, p);
+    // scene.background(0);
+    // scene.clear(0, 0, 0, 0);
 
-    this.drawLinesBetweenItems(p, this.generators);
+    // draw three frametime
 
-    if (this.generators.length === 3) { this.drawShapeBetweenItems(p, this.generators);}
+    // this.defaultCamera(scene);
+    // this.moveCamera(time, scene);
 
-    this.renderGenerators(
-      p, time, [
-        ...this.generators
-        // ...this.permanentRenderers
-      ]);
+    // this.drawLinesBetweenItems(scene, this.generators);
+
+    // if (this.generators.length === 3) { this.drawShapeBetweenItems(scene, this.generators);}
+
+    // this.renderGenerators(
+    //   scene, time, [
+    //     ...this.generators
+    //     // ...this.permanentRenderers
+    //   ]);
     //
-    this.additionalRenderSteps(p, window, getOrigin(p), this.getCurrentTime());
+    // this.additionalRenderSteps(scene, window, getOrigin(scene), this.getCurrentTime());
   }
 
   private moveCamera(time: number, p: p5): void {
@@ -467,6 +527,11 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
   }
 
+  onGridHelperReady(helper: GridHelper) {
+    const material = helper.material as Material;
+    material.opacity = 0.2;
+    material.transparent = true;
+  }
 }
 
 function lifeToColor(arg0: number): string {
