@@ -54,12 +54,15 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private events = {
     windowResized$: new Subject<{ width: number, height: number }>(),
-    threeInitialized$: new Subject<{ p: p5 }>()
+    threeInitialized$: new Subject<void>()
   }
 
   private renderers: RendererContainer = new RendererContainer(this.currentTime$, this.constants);
+  window = window;
 
-  constructor() {
+  constructor(
+    // public a: NgtCanvas
+  ) {
 
   }
 
@@ -121,6 +124,8 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(value => this.currentTime$.next(value));
+
+    this.events.threeInitialized$.next()
     //
     // this.events.threeInitialized$
     //   .pipe(
