@@ -5,15 +5,11 @@ import { MovementManager } from './MovementManager';
 
 export namespace Models {
 
-  export type DrawFunction = (p: p5, currentTime: number) => void;
-  export type DrawPositionedItem = (p: p5, coordinate: Coordinates, unit: number) => void;
 
   export interface MyGenerator {
     id: number;
     lifetimeManager: LifetimeManager;
     kind: 'item' | 'dotgrid';
-
-    drawLayers: (DrawFunction)[];
 
   }
 
@@ -28,18 +24,15 @@ export namespace Models {
     id: number;
     lifetimeManager: LifetimeManager;
     movementManager: MovementManager;
-    drawLayers: (DrawFunction)[] = [];
 
     constructor(
       id: number,
       lifetimeManager: LifetimeManager,
       movementManager: MovementManager,
-      drawLayers: (DrawFunction)[] = []
     ) {
       this.id = id;
       this.lifetimeManager = lifetimeManager;
       this.movementManager = movementManager;
-      this.drawLayers = drawLayers;
     }
 
   }

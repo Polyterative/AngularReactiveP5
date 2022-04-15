@@ -1,9 +1,10 @@
 import { NgtColorPipeModule, NgtCoreModule, NgtFogPipeModule, NgtObjectInputsControllerModule } from '@angular-three/core';
-import { NgtBoxGeometryModule, NgtConeGeometryModule } from '@angular-three/core/geometries';
+import { NgtBoxGeometryModule, NgtCircleGeometryModule, NgtConeGeometryModule } from '@angular-three/core/geometries';
 import { NgtBoxHelperModule, NgtGridHelperModule } from '@angular-three/core/helpers';
 import { NgtAmbientLightModule, NgtDirectionalLightModule, NgtHemisphereLightModule } from '@angular-three/core/lights';
 import {
-  NgtLineBasicMaterialModule, NgtMeshBasicMaterialModule, NgtMeshPhongMaterialModule, NgtMeshPhysicalMaterialModule,
+  NgtLineBasicMaterialModule, NgtLineDashedMaterialModule, NgtMeshBasicMaterialModule, NgtMeshPhongMaterialModule,
+  NgtMeshPhysicalMaterialModule,
   NgtMeshStandardMaterialModule
 } from '@angular-three/core/materials';
 import { NgtMeshModule } from '@angular-three/core/meshes';
@@ -56,7 +57,9 @@ import { ThreeObjectsModule } from './container/objects/three-objects/three-obje
     NgtSobaOrbitControlsModule,
 //
     ThreeObjectsModule,
-    SimpleCubeComponentModule
+    SimpleCubeComponentModule,
+    NgtCircleGeometryModule,
+    NgtLineDashedMaterialModule
   ]
 })
 export class GenerativeModule {}

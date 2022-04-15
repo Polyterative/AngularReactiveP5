@@ -2,13 +2,12 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } 
 import p5 from 'p5';
 import { BehaviorSubject, bufferCount, from, interval, merge, startWith, Subject, switchMap, take } from 'rxjs';
 import { map, share, takeUntil } from 'rxjs/operators';
-import { Color, GridHelper, Material, Object3D, Scene } from 'three';
+import { Euler, GridHelper, Material } from 'three';
 import { WebMidi } from 'webmidi';
 import { RendererContainer } from '../RenderAlgos/RendererContainer';
 import { Models } from './models';
 import { Utils } from './utils';
 import Coordinates = Models.Coordinates;
-import DrawFunction = Models.DrawFunction;
 import createCoordinatesGrid = Utils.createCoordinatesGrid;
 import getOrigin = Utils.getOrigin;
 import secondsToFrames = Utils.secondsToFrames;
@@ -30,7 +29,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private unit = 8;
 
-  private generators: Models.ItemGenerator[] = [];
+  generators: Models.ItemGenerator[] = [];
   private permanentRenderers: Models.PiGenerator[] = [];
 
   private addItemGenerators$ = new Subject<Models.ItemGenerator[]>();
@@ -47,8 +46,30 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // @ViewChild(`canvas`)
-  // private canvas: ElementRef;
+  public readonly threeUtils = {
+    degreesToEuler: (x: number, y: number, z: number) => {
+
+      console.log(x, y, z);
+      console.log(new Euler(
+        x * Math.PI / 180,
+        y * Math.PI / 180,
+        z * Math.PI / 180
+      ));
+      // degrees to radians
+      return new Euler(
+        x * Math.PI / 180,
+        y * Math.PI / 180,
+        z * Math.PI / 180
+      );
+    }
+  }
+
+  public readonly threeConstants = {
+    angles: {
+      standard: new Euler(0, 0, 0),
+      top: this.threeUtils.degreesToEuler(270, 0, 0)
+    }
+  }
 
   private coordinatesGrid$ = new BehaviorSubject<Models.CoordinateGridPoint[]>([]);
 
@@ -63,61 +84,6 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     // public a: NgtCanvas
   ) {
-
-  }
-
-  ngAfterViewInit() {
-
-    // // converting p5 code to three.js
-    // let threejs: Scene = new Scene()
-    //
-    // let camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-    //
-    // let renderer = new WebGLRenderer({
-    //   antialias: true,
-    //   alpha: true
-    // });
-    //
-    // // replace 'canvas' in dom with three.js renderer
-    // renderer.setSize(window.innerWidth, window.innerHeight);
-    // renderer.setClearColor(0x000000, 0);
-    //
-    // // add three.js renderer to child element
-    // this.canvas.nativeElement.appendChild(renderer.domElement);
-
-    // const scene = new Scene();
-    // const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    //
-    // const renderer = new WebGLRenderer();
-    // renderer.setSize(window.innerWidth, window.innerHeight);
-    // document.body.appendChild(renderer.domElement);
-    //
-    // let geometry = new BoxGeometry(1, 1, 1);
-    //
-    // const material = new MeshBasicMaterial({ color: 0x00ff00 });
-    //
-    // const cube = new Mesh(geometry, material);
-    // scene.add(cube);
-    //
-    // camera.position.z = 5;
-    //
-    // renderer.render(scene, camera);
-
-    // draw debug fps in three.js
-
-    // const animate = function () {
-    //   requestAnimationFrame(animate);
-    //
-    //   cube.rotation.x += 0.01;
-    //   cube.rotation.y += 0.01;
-    //
-    //   renderer.render(scene, camera);
-    // };
-    //
-    // animate();
-
-    //
-    //
     this.events.threeInitialized$
       .pipe(
         switchMap(x => this.interval$),
@@ -125,7 +91,14 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
       )
       .subscribe(value => this.currentTime$.next(value));
 
+    this.addGenerators();
+  }
+
+  ngAfterViewInit() {
     this.events.threeInitialized$.next()
+
+    //
+
     //
     // this.events.threeInitialized$
     //   .pipe(
@@ -252,39 +225,29 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     // });
   }
 
-  private renderFrame(scene: Scene, time: number): void {
-    // clear webgl canvas
+  // private renderFrame(scene: Scene, time: number): void {
+  // clear webgl canvas
 
-    scene.background = new Color(0x000000);
+  // scene.background(0);
+  // scene.clear(0, 0, 0, 0);
 
-    // draw text with time in threejs scene
-    let timeObj: Object3D = new Object3D();
-    timeObj.position.set(0, 0, 0);
-    timeObj.scale.set(0.1, 0.1, 0.1);
-    timeObj.rotation.set(0, 0, 0);
-    timeObj.name = 'time';
-    scene.add(timeObj);
+  // draw three frametime
 
-    // scene.background(0);
-    // scene.clear(0, 0, 0, 0);
+  // this.defaultCamera(scene);
+  // this.moveCamera(time, scene);
 
-    // draw three frametime
+  // this.drawLinesBetweenItems(scene, this.generators);
 
-    // this.defaultCamera(scene);
-    // this.moveCamera(time, scene);
+  // if (this.generators.length === 3) { this.drawShapeBetweenItems(scene, this.generators);}
 
-    // this.drawLinesBetweenItems(scene, this.generators);
-
-    // if (this.generators.length === 3) { this.drawShapeBetweenItems(scene, this.generators);}
-
-    // this.renderGenerators(
-    //   scene, time, [
-    //     ...this.generators
-    //     // ...this.permanentRenderers
-    //   ]);
-    //
-    // this.additionalRenderSteps(scene, window, getOrigin(scene), this.getCurrentTime());
-  }
+  // this.renderGenerators(
+  //   scene, time, [
+  //     ...this.generators
+  //     // ...this.permanentRenderers
+  //   ]);
+  //
+  // this.additionalRenderSteps(scene, window, getOrigin(scene), this.getCurrentTime());
+  // }
 
   private moveCamera(time: number, p: p5): void {
     // rotate camera time function of sin
@@ -317,99 +280,99 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     // move camera further in z
   }
 
-  private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
-    // find the highest layer index
-    let xTranslation: number = 0;
-    let yTranslation: number = 0;
+  // private renderGenerators(p: p5, time: number, generators: Models.PiGenerator[]): void {
+  //   // find the highest layer index
+  //   let xTranslation: number = 0;
+  //   let yTranslation: number = 0;
+  //
+  //   const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), xTranslation);
+  //
+  //   // draw all layers
+  //   p.translate(xTranslation, yTranslation, this.constants.units.distanceBetweenLayers);
+  //
+  //   let heightDisplacement: number;
+  //   for (let i = xTranslation; i < highestLayerIndex; i++) {
+  //     heightDisplacement = i * this.constants.units.distanceBetweenLayers;
+  //     p.translate(xTranslation, yTranslation, heightDisplacement);
+  //
+  //     let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
+  //     drawFunctions.forEach(draw => { if (draw) {draw(p, time);} });
+  //
+  //     p.translate(xTranslation, yTranslation, -heightDisplacement);
+  //   }
+  //
+  //   p.translate(xTranslation, yTranslation, -(this.constants.units.distanceBetweenLayers));
+  // }
 
-    const highestLayerIndex = generators.reduce((acc, x) => Math.max(acc, x.drawLayers.length), xTranslation);
+  // private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
+  //   // fill shape between items with a polygon between all the points
+  //   let points = items.map(x => x.movementManager.getCurrentCoordinates())
+  //
+  //   // draw polygon between all the points
+  //
+  //   //flicker alpharandomly when items are close to dying
+  //   let alpha = 255 / 20;
+  //   let lifeInPerc = items[0].lifetimeManager.getRemainingLifetimePercentage();
+  //   if (lifeInPerc < 5 || lifeInPerc > 90) {
+  //     alpha = p.map(p.random(0, 100 - lifeInPerc) - lifeInPerc, 0, 100, 0, 255 / 50);
+  //   }
+  //   p.fill(255, alpha);
+  //   p.beginShape();
+  //   points.forEach(point => {
+  //     p.vertex(point.x, point.y);
+  //   });
+  //   p.endShape(p.CLOSE);
+  // }
 
-    // draw all layers
-    p.translate(xTranslation, yTranslation, this.constants.units.distanceBetweenLayers);
-
-    let heightDisplacement: number;
-    for (let i = xTranslation; i < highestLayerIndex; i++) {
-      heightDisplacement = i * this.constants.units.distanceBetweenLayers;
-      p.translate(xTranslation, yTranslation, heightDisplacement);
-
-      let drawFunctions: (DrawFunction | undefined)[] = generators.map(x => x.drawLayers[i]);
-      drawFunctions.forEach(draw => { if (draw) {draw(p, time);} });
-
-      p.translate(xTranslation, yTranslation, -heightDisplacement);
-    }
-
-    p.translate(xTranslation, yTranslation, -(this.constants.units.distanceBetweenLayers));
-  }
-
-  private drawShapeBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
-    // fill shape between items with a polygon between all the points
-    let points = items.map(x => x.movementManager.getCurrentCoordinates())
-
-    // draw polygon between all the points
-
-    //flicker alpharandomly when items are close to dying
-    let alpha = 255 / 20;
-    let lifeInPerc = items[0].lifetimeManager.getRemainingLifetimePercentage();
-    if (lifeInPerc < 5 || lifeInPerc > 90) {
-      alpha = p.map(p.random(0, 100 - lifeInPerc) - lifeInPerc, 0, 100, 0, 255 / 50);
-    }
-    p.fill(255, alpha);
-    p.beginShape();
-    points.forEach(point => {
-      p.vertex(point.x, point.y);
-    });
-    p.endShape(p.CLOSE);
-  }
-
-  private drawLinesBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
-
-    //draw dots between items
-    items.forEach((item, index) => {
-      let aCord = item.movementManager.getCurrentCoordinates();
-      let ax: number = aCord.x;
-      let ay: number = aCord.y;
-
-      items.forEach((item2, index2) => {
-          if (index !== index2) {
-            // alpha inverse proportional to distance
-
-            let bCord = item2.movementManager.getCurrentCoordinates();
-            let bx: number = bCord.x;
-            let by: number = bCord.y;
-
-            let distance: number = p.dist(ax, ay, bx, by);
-            // alpha proportional to distance (0-100) with further distance = less alpha
-            let alpha: number = p.map(distance, 0, p.width, 0, 100);
-
-            // round alpha to nearest integer
-            alpha = Math.round(alpha);
-
-            // half alpha
-            alpha = alpha / 2;
-
-            // flicker alpha slightly
-            let life = item.lifetimeManager.remainingLifetimePercentage$.value;
-            if (life < 10 || life > 90) {
-              alpha = p.random(0, alpha);
-            }
-
-            p.stroke(255, alpha);
-            p.line(ax, ay, bx, by);
-
-            p.stroke(255, 0);
-            p.fill(255, alpha);
-
-            p.textSize(8);
-            // draw text in the middle of the line between items (not exactly in the middle) to make it easier to read the lines
-            p.text(Math.round(distance), (ax + bx) / 2, (ay + by) / 2);
-
-          }
-          }
-        );
-      }
-    );
-
-  }
+  // private drawLinesBetweenItems(p: p5, items: Models.ItemGenerator[]): void {
+  //
+  //   //draw dots between items
+  //   items.forEach((item, index) => {
+  //       let aCord = item.movementManager.getCurrentCoordinates();
+  //       let ax: number = aCord.x;
+  //       let ay: number = aCord.y;
+  //
+  //       items.forEach((item2, index2) => {
+  //           if (index !== index2) {
+  //             // alpha inverse proportional to distance
+  //
+  //             let bCord = item2.movementManager.getCurrentCoordinates();
+  //             let bx: number = bCord.x;
+  //             let by: number = bCord.y;
+  //
+  //             let distance: number = p.dist(ax, ay, bx, by);
+  //             // alpha proportional to distance (0-100) with further distance = less alpha
+  //             let alpha: number = p.map(distance, 0, p.width, 0, 100);
+  //
+  //             // round alpha to nearest integer
+  //             alpha = Math.round(alpha);
+  //
+  //             // half alpha
+  //             alpha = alpha / 2;
+  //
+  //             // flicker alpha slightly
+  //             let life = item.lifetimeManager.remainingLifetimePercentage$.value;
+  //             if (life < 10 || life > 90) {
+  //               alpha = p.random(0, alpha);
+  //             }
+  //
+  //             p.stroke(255, alpha);
+  //             p.line(ax, ay, bx, by);
+  //
+  //             p.stroke(255, 0);
+  //             p.fill(255, alpha);
+  //
+  //             p.textSize(8);
+  //             // draw text in the middle of the line between items (not exactly in the middle) to make it easier to read the lines
+  //             p.text(Math.round(distance), (ax + bx) / 2, (ay + by) / 2);
+  //
+  //           }
+  //         }
+  //       );
+  //     }
+  //   );
+  //
+  // }
 
   private addGenerators(): void {
     let movers$ = this.interval$
