@@ -1,11 +1,12 @@
 import { NgtColorPipeModule, NgtCoreModule, NgtFogPipeModule, NgtObjectInputsControllerModule } from '@angular-three/core';
 import { NgtBoxGeometryModule, NgtConeGeometryModule } from '@angular-three/core/geometries';
 import { NgtBoxHelperModule, NgtGridHelperModule } from '@angular-three/core/helpers';
-import { NgtDirectionalLightModule, NgtHemisphereLightModule } from '@angular-three/core/lights';
+import { NgtAmbientLightModule, NgtDirectionalLightModule, NgtHemisphereLightModule } from '@angular-three/core/lights';
 import {
   NgtLineBasicMaterialModule, NgtMeshBasicMaterialModule, NgtMeshPhongMaterialModule, NgtMeshPhysicalMaterialModule,
   NgtMeshStandardMaterialModule
 } from '@angular-three/core/materials';
+import { NgtMeshModule } from '@angular-three/core/meshes';
 import { NgtStatsModule } from '@angular-three/core/stats';
 import { NgtSobaOrbitControlsModule } from '@angular-three/soba/controls';
 import { NgtSobaStarsModule } from '@angular-three/soba/staging';
@@ -24,26 +25,38 @@ import { ThreeObjectsModule } from './container/objects/three-objects/three-obje
   ],
   imports: [
     CommonModule,
+//
     NgtCoreModule,
-    NgtObjectInputsControllerModule,
-    NgtBoxGeometryModule,
-    NgtMeshStandardMaterialModule,
-    ThreeObjectsModule,
-    NgtBoxHelperModule,
     NgtStatsModule,
-    SimpleCubeComponentModule,
-    NgtMeshPhongMaterialModule,
-    NgtSobaStarsModule,
-    NgtGridHelperModule,
     NgtColorPipeModule,
     NgtFogPipeModule,
+//
+    NgtMeshModule,
+//
+    NgtObjectInputsControllerModule,
+//
+    NgtBoxGeometryModule,
+    NgtConeGeometryModule,
+//
+    NgtAmbientLightModule,
     NgtHemisphereLightModule,
     NgtDirectionalLightModule,
-    NgtSobaOrbitControlsModule,
-    NgtConeGeometryModule,
+//
+    NgtBoxHelperModule,
+    NgtGridHelperModule,
+//
     NgtMeshBasicMaterialModule,
+    NgtMeshPhongMaterialModule,
     NgtLineBasicMaterialModule,
-    NgtMeshPhysicalMaterialModule
+    NgtMeshPhysicalMaterialModule,
+    NgtMeshStandardMaterialModule,
+//
+    NgtSobaStarsModule,
+//
+    NgtSobaOrbitControlsModule,
+//
+    ThreeObjectsModule,
+    SimpleCubeComponentModule
   ]
 })
 export class GenerativeModule {}
