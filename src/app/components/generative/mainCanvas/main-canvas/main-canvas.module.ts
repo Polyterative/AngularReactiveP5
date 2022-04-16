@@ -12,15 +12,14 @@ import { NgtSobaOrbitControlsModule } from '@angular-three/soba/controls';
 import { NgtSobaStarsModule } from '@angular-three/soba/staging';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { ContainerComponent } from './container/container.component';
-import { ThreeObjectsModule } from './container/objects/three-objects/three-objects.module';
+import { MainCanvasComponent } from './main-canvas.component';
 
 @NgModule({
   declarations: [
-    ContainerComponent
+    MainCanvasComponent
   ],
   exports: [
-    ContainerComponent
+    MainCanvasComponent
   ],
   imports: [
     CommonModule,
@@ -54,9 +53,8 @@ import { ThreeObjectsModule } from './container/objects/three-objects/three-obje
 //
     NgtSobaOrbitControlsModule,
 //
-    ThreeObjectsModule,
     NgtCircleGeometryModule,
     NgtLineDashedMaterialModule
   ]
 })
-export class GenerativeModule {}
+export class MainCanvasModule {}

@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 
 import { AppComponent } from './app.component';
 import { GenerativeModule } from './components/generative/generative.module';
+import { MainCanvasModule } from './components/generative/mainCanvas/main-canvas/main-canvas.module';
 
 @NgModule({
   declarations: [
@@ -12,7 +13,8 @@ import { GenerativeModule } from './components/generative/generative.module';
   imports: [
     BrowserModule,
     RouterModule,
-    GenerativeModule
+    GenerativeModule,
+    MainCanvasModule
   ],
   providers: [],
   bootstrap: [AppComponent]
