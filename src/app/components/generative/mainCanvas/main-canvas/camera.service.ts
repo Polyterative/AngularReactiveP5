@@ -1,30 +1,25 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, merge } from 'rxjs';
+import { merge } from 'rxjs';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { ConstantsService } from './constants.service';
 
 @Injectable()
 export class CameraService {
 
-  public options$: BehaviorSubject<PerspectiveCamera> = new BehaviorSubject<PerspectiveCamera>(
-    new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000)
-  );
+  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
 
   constructor(
     private constantsService: ConstantsService
   ) {
-    let camera = this.options$.value;
-    camera.position.add(new Vector3(0, 5, 0));
-    this.options$.next(camera);
+    this.options.position.add(new Vector3(0, 5, 0));
 
     merge(
       this.constantsService.tick$
     )
       .pipe(
-
       )
       .subscribe(() => {
-        this.options$.value.position.add(new Vector3(0, 0, -(1 / 50)));
+        this.options.position.add(new Vector3(0, 0, -(1 / 50)));
       });
 
   }

@@ -1,12 +1,10 @@
-<ng-container *ngIf="cameraService.options$|async as cameraOptions">
   <ngt-canvas
       (created)="$event.camera.lookAt(0, 0, -10000)"
       [shadows]="true"
-      [camera]="cameraOptions"
+      [camera]="cameraService.options"
       [scene]="{ background: '#0e0e0e' | color, fog: ['#e0e0e0', 20, 100] | fog }"
       [size]="{ width: window.innerWidth, height: window.innerHeight }"
   >
     <app-canvas-content></app-canvas-content>
   </ngt-canvas>
   <!--<ngt-soba-loader></ngt-soba-loader>-->
-</ng-container>
