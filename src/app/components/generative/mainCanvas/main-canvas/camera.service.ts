@@ -6,12 +6,16 @@ import { ConstantsService } from './constants.service';
 @Injectable()
 export class CameraService {
 
-  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.01, 1000);
+
+  private farEnd = new Vector3(0, 0, -100000);
 
   constructor(
     private constantsService: ConstantsService
   ) {
     this.options.position.add(new Vector3(0, 5, 0));
+    // this.options.lookAt(this.farEnd);
+    this.options.lookAt(new Vector3(5, 0, -5));
 
     merge(
       this.constantsService.tick$

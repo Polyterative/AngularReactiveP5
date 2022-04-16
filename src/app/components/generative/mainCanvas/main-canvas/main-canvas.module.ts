@@ -13,16 +13,19 @@ import { NgtSobaStarsModule } from '@angular-three/soba/staging';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { CanvasContentComponent } from './canvas-content/canvas-content.component';
+import { GeneratedObjectsComponent } from './canvas-content/generated-objects/generated-objects.component';
 import { MainCanvasComponent } from './main-canvas.component';
 
 @NgModule({
   declarations: [
     MainCanvasComponent,
-    CanvasContentComponent
+    CanvasContentComponent,
+    GeneratedObjectsComponent
   ],
   exports: [
     MainCanvasComponent,
-    CanvasContentComponent
+    CanvasContentComponent,
+    GeneratedObjectsComponent
   ],
   imports: [
     CommonModule,

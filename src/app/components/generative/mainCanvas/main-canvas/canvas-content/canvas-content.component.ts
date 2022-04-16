@@ -9,7 +9,8 @@ import { GridHelper } from 'three';
 })
 export class CanvasContentComponent implements OnInit {
 
-  onGridHelperReady(helper: GridHelper): void {
+  onGridHelperReady(
+    helper: GridHelper): void {
 
   }
 

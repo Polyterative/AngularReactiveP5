@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit } 
 import p5 from 'p5';
 import { BehaviorSubject, from, interval, Subject, switchMap } from 'rxjs';
 import { share, takeUntil } from 'rxjs/operators';
-import { Euler, GridHelper, Material } from 'three';
+import { GridHelper, Material } from 'three';
 import { WebMidi } from 'webmidi';
 import { RendererContainer } from '../RenderAlgos/RendererContainer';
 import { Models } from './models';
@@ -44,30 +44,7 @@ export class ContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  public readonly threeUtils = {
-    degreesToEuler: (x: number, y: number, z: number) => {
 
-      console.log(x, y, z);
-      console.log(new Euler(
-        x * Math.PI / 180,
-        y * Math.PI / 180,
-        z * Math.PI / 180
-      ));
-      // degrees to radians
-      return new Euler(
-        x * Math.PI / 180,
-        y * Math.PI / 180,
-        z * Math.PI / 180
-      );
-    }
-  }
-
-  public readonly threeConstants = {
-    angles: {
-      standard: new Euler(0, 0, 0),
-      top: this.threeUtils.degreesToEuler(270, 0, 0)
-    }
-  }
 
   private coordinatesGrid$ = new BehaviorSubject<Models.CoordinateGridPoint[]>([]);
 
