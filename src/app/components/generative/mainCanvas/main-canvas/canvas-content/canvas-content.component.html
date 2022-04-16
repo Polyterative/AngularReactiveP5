@@ -1,0 +1,10 @@
+<ngt-stats></ngt-stats>
+<!--<ngt-soba-orbit-controls></ngt-soba-orbit-controls>-->
+<ngt-soba-stars></ngt-soba-stars>
+<!--  <ngt-ambient-light [color]="'#ffffff' | color"></ngt-ambient-light>-->
+<ngt-grid-helper
+    #ngtGridHelper="ngtGridHelper"
+    (ready)="onGridHelperReady(ngtGridHelper.helper)"
+    [args]="[100, 40, '#000000', '#000000']"
+    [receiveShadow]="true"
+></ngt-grid-helper>

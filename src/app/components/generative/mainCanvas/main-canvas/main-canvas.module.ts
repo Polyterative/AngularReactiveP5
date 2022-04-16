@@ -12,14 +12,17 @@ import { NgtSobaOrbitControlsModule } from '@angular-three/soba/controls';
 import { NgtSobaStarsModule } from '@angular-three/soba/staging';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { CanvasContentComponent } from './canvas-content/canvas-content.component';
 import { MainCanvasComponent } from './main-canvas.component';
 
 @NgModule({
   declarations: [
-    MainCanvasComponent
+    MainCanvasComponent,
+    CanvasContentComponent
   ],
   exports: [
-    MainCanvasComponent
+    MainCanvasComponent,
+    CanvasContentComponent
   ],
   imports: [
     CommonModule,

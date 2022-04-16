@@ -1,20 +1,12 @@
-<ngt-canvas
-    (created)="$event.camera.lookAt(0, 0, 0)"
-    [shadows]="true"
-    [camera]="{ fov: 35, far: 1000, position: [-25, 25, 25] }"
-    [scene]="{ background: '#0e0e0e' | color, fog: ['#e0e0e0', 20, 100] | fog }"
-    [size]="{ width: window.innerWidth, height: window.innerHeight }"
->
-  <ngt-stats></ngt-stats>
-  <ngt-soba-orbit-controls></ngt-soba-orbit-controls>
-  <!--      <ngt-soba-stars></ngt-soba-stars>-->
-  <!--  <ngt-ambient-light [color]="'#ffffff' | color"></ngt-ambient-light>-->
-  <ngt-grid-helper
-      #ngtGridHelper="ngtGridHelper"
-      (ready)="onGridHelperReady(ngtGridHelper.helper)"
-      [args]="[100, 40, '#000000', '#000000']"
-      [receiveShadow]="true"
-  ></ngt-grid-helper>
-
-</ngt-canvas>
-<!--<ngt-soba-loader></ngt-soba-loader>-->
+<ng-container *ngIf="cameraService.options$|async as cameraOptions">
+  <ngt-canvas
+      (created)="$event.camera.lookAt(0, 0, -10000)"
+      [shadows]="true"
+      [camera]="cameraOptions"
+      [scene]="{ background: '#0e0e0e' | color, fog: ['#e0e0e0', 20, 100] | fog }"
+      [size]="{ width: window.innerWidth, height: window.innerHeight }"
+  >
+    <app-canvas-content></app-canvas-content>
+  </ngt-canvas>
+  <!--<ngt-soba-loader></ngt-soba-loader>-->
+</ng-container>
