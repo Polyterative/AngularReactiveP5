@@ -8,7 +8,7 @@ export class CameraService {
 
   public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.01, 1000);
 
-  private farEnd = new Vector3(0, 0, -100000);
+  private farEnd = new Vector3(0, 0, 100000);
 
   public speedDivider = 5;
 
@@ -25,7 +25,7 @@ export class CameraService {
       .pipe(
       )
       .subscribe(() => {
-        if (true) { this.options.position.add(new Vector3(0, 0, -(1 / this.speedDivider)));}
+        if (true) { this.options.position.add(new Vector3(0, 0, (1 / this.speedDivider)));}
       });
 
   }

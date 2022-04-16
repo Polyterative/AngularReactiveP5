@@ -20,6 +20,7 @@ export class GeneratedObjectsComponent implements OnInit {
     public constantsService: ConstantsService,
     private changeDetector: ChangeDetectorRef
   ) {
+
     this.constantsService.tick$
       .pipe(
         bufferCount(this.constantsService.fps / 2),
@@ -31,7 +32,7 @@ export class GeneratedObjectsComponent implements OnInit {
           position: new Vector3(
             0,
             1,
-            -((x / this.cameraService.speedDivider) + 20)
+            ((x / this.cameraService.speedDivider) + 20)
           ),
           rotation: new Vector3(
             0,
