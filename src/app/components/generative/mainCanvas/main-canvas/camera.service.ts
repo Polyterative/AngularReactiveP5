@@ -10,10 +10,12 @@ export class CameraService {
 
   private farEnd = new Vector3(0, 0, -100000);
 
+  public speedDivider = 5;
+
   constructor(
     private constantsService: ConstantsService
   ) {
-    this.options.position.add(new Vector3(0, 5, 0));
+    this.options.position.add(new Vector3(0, 15, 0));
     this.options.lookAt(this.farEnd);
     // this.options.lookAt(new Vector3(5, 0, -5));
 
@@ -23,7 +25,7 @@ export class CameraService {
       .pipe(
       )
       .subscribe(() => {
-        if (true) { this.options.position.add(new Vector3(0, 0, -(1 / 20)));}
+        if (true) { this.options.position.add(new Vector3(0, 0, -(1 / this.speedDivider)));}
       });
 
   }

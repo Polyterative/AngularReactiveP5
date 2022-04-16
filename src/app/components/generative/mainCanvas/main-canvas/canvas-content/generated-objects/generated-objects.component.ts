@@ -31,7 +31,7 @@ export class GeneratedObjectsComponent implements OnInit {
           position: new Vector3(
             0,
             1,
-            -(x / 10)
+            -((x / this.cameraService.speedDivider) + 20)
           ),
           rotation: new Vector3(
             0,
@@ -39,6 +39,11 @@ export class GeneratedObjectsComponent implements OnInit {
             0
           )
         });
+
+        // move x to the right or to the left at max 10 at random
+        // this.objects.forEach((object) => {
+        //   object.position.x = object.position.x + (Math.random() * 20) - 5;
+        // });
 
         this.changeDetector.markForCheck();
         this.changeDetector.detectChanges();
