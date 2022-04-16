@@ -1,7 +1,16 @@
-<ngt-mesh [position]="[0,1,0]"
-          [rotation]="constantsService.threeConstants.angles.standard"
+<ngt-mesh [position]="[5,1,-5]"
+          [rotation]="constantsService.threeConstants.angles.top"
 >
-  <ngt-circle-geometry [args]="[5,32]"></ngt-circle-geometry>
+  <ngt-circle-geometry [args]="[2.5,32]"></ngt-circle-geometry>
   <!--    <ngt-box-geometry [args]="[5,10]"></ngt-box-geometry>-->
   <!--    <ngt-line-dashed-material [parameters]="{ color: '#227e1e' | color, }"></ngt-line-dashed-material>-->
 </ngt-mesh>
+<ng-container *ngFor="let item of objects;">
+  <ngt-mesh [position]="item.position"
+            [rotation]="constantsService.threeConstants.angles.top"
+  >
+    <ngt-circle-geometry [args]="[2.5,32]"></ngt-circle-geometry>
+    <!--    <ngt-box-geometry [args]="[5,10]"></ngt-box-geometry>-->
+    <!--    <ngt-line-dashed-material [parameters]="{ color: '#227e1e' | color, }"></ngt-line-dashed-material>-->
+  </ngt-mesh>
+</ng-container>

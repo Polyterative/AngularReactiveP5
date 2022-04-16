@@ -1,5 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { bufferCount, map } from 'rxjs';
+import { Vector3 } from 'three';
+import { CameraService } from '../../camera.service';
 import { ConstantsService } from '../../constants.service';
+import { Models } from './Models';
 
 @Component({
   selector: 'app-generated-objects',
@@ -9,11 +13,56 @@ import { ConstantsService } from '../../constants.service';
 })
 export class GeneratedObjectsComponent implements OnInit {
 
+  objects: Models.PositionedObject[] = [];
+
   constructor(
-    public constantsService: ConstantsService
-  ) { }
+    public cameraService: CameraService,
+    public constantsService: ConstantsService,
+    private changeDetector: ChangeDetectorRef
+  ) {
+    this.constantsService.tick$
+      .pipe(
+        bufferCount(this.constantsService.fps / 2),
+        map((x) => (x[x.length - 1]))
+      )
+      .subscribe((x) => {
+        // add new objects to the array
+        this.objects.push({
+          position: new Vector3(
+            0,
+            1,
+            -(x / 10)
+          ),
+          rotation: new Vector3(
+            0,
+            0,
+            0
+          )
+        });
+
+        this.changeDetector.markForCheck();
+        this.changeDetector.detectChanges();
+      });
+
+    //remove objects from the array that are too far away from the camera
+    this.constantsService.tick$
+      .pipe(
+        bufferCount(this.constantsService.fps),
+        map((x) => (x[x.length - 1]))
+      )
+      .subscribe((x) => {
+        let cameraPosition: Vector3 = this.cameraService.options.position;
+
+        this.objects = this.objects.filter((object) => {
+          let distance: number = object.position.distanceTo(cameraPosition);
+          return distance < 50;
+        });
+
+      });
+  }
 
   ngOnInit(): void {
+
   }
 
 }

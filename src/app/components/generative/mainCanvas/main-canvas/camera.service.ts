@@ -14,8 +14,8 @@ export class CameraService {
     private constantsService: ConstantsService
   ) {
     this.options.position.add(new Vector3(0, 5, 0));
-    // this.options.lookAt(this.farEnd);
-    this.options.lookAt(new Vector3(5, 0, -5));
+    this.options.lookAt(this.farEnd);
+    // this.options.lookAt(new Vector3(5, 0, -5));
 
     merge(
       this.constantsService.tick$
@@ -23,7 +23,7 @@ export class CameraService {
       .pipe(
       )
       .subscribe(() => {
-        this.options.position.add(new Vector3(0, 0, -(1 / 50)));
+        if (true) { this.options.position.add(new Vector3(0, 0, -(1 / 20)));}
       });
 
   }
