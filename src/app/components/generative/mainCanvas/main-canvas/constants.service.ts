@@ -7,19 +7,19 @@ import { Euler } from 'three';
 })
 export class ConstantsService {
 
-  public readonly fps: number = 60;
+  public readonly tickRate: number = 5;
+  public readonly bpm: number = 120;
   private tickCount$ = new BehaviorSubject<number>(0);
 
   public tick$ = this.tickCount$.asObservable();
 
+  private beatCount$ = new BehaviorSubject<number>(0);
+
+  public beat$ = this.beatCount$;
+
   public readonly threeUtils = {
     degreesToEuler: (x: number, y: number, z: number) => {
 
-      console.log(new Euler(
-        x * Math.PI / 180,
-        y * Math.PI / 180,
-        z * Math.PI / 180
-      ));
       // degrees to radians
       return new Euler(
         x * Math.PI / 180,
@@ -37,9 +37,9 @@ export class ConstantsService {
   }
 
   constructor() {
-    interval(1000 / this.fps)
-      .subscribe(() => {
-        this.tickCount$.next(this.tickCount$.value + 1);
-      });
+    interval(this.tickRate).subscribe((x) => this.tickCount$.next(x));
+
+    interval(this.bpm).subscribe((x) => this.beatCount$.next(x));
+
   }
 }

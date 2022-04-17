@@ -6,35 +6,35 @@ import { ConstantsService } from './constants.service';
 @Injectable()
 export class CameraService {
 
-  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.01, 1000);
+  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.01, 5000);
 
-  private farEnd = new Vector3(0, 0, 100000);
+  private zHorizon = new Vector3(0, 0, 100000);
 
-  public speedDivider = 5;
+  public speedDivider = 1.5;
 
   constructor(
     private constantsService: ConstantsService
   ) {
-    this.options.position.add(new Vector3(0, 15, 0));
-    this.options.lookAt(this.farEnd);
-    // this.options.lookAt(new Vector3(5, 0, -5));
+    this.options.position.add(new Vector3(0, 50, 0));
+    // this.options.lookAt(this.zHorizon);
+    this.options.lookAt(new Vector3(0, 50, 1000));
 
     merge(
       this.constantsService.tick$
     )
-      .pipe(
-      )
       .subscribe(() => {
-        if (true) { this.options.position.add(new Vector3(0, 0, (1 / this.speedDivider)));}
+        this.options.position.add(new Vector3(0, 0, (1 / this.speedDivider)));
       });
+
+    // move camera every four beats
+    // this.constantsService.beat$.subscribe((x) => {
+    //   if (x % 32 === 0) {
+    //     // smoothly move camera behind by 500 units
+    //     this.options.position.add(new Vector3(0, 0, -500));
+    //   }
+    // });
 
   }
 
-  // focalLenghtToFov(focalLength: number) {
-  //   // consider 35mm film camera as a reference with no regard to the window size
-  //   let fov: number = 2 * Math.atan(window.innerHeight / (2 * focalLength)) * 180 / Math.PI;
-  //   console.log(fov);
-  //   return fov;
-  // }
 
 }

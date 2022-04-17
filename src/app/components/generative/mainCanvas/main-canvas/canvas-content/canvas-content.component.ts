@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { GridHelper } from 'three';
+import { CameraService } from '../camera.service';
 
 @Component({
   selector: 'app-canvas-content',
@@ -14,7 +15,9 @@ export class CanvasContentComponent implements OnInit {
 
   }
 
-  constructor() { }
+  constructor(
+    public cameraService: CameraService
+  ) { }
 
   ngOnInit(): void {
   }

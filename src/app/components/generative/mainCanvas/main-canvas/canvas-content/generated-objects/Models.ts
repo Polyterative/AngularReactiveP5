@@ -17,6 +17,14 @@ export namespace Models {
   export interface PositionedObject {
     position: Vector3;
     rotation: Vector3;
+    type: ObjectType;
   }
+
+  export enum ObjectTypes {
+    FLAT_CIRCLE = 'flat-circle',
+    DOTGRID = 'dotgrid',
+  }
+
+  export type ObjectType = `${ ObjectTypes }`;
 
 }

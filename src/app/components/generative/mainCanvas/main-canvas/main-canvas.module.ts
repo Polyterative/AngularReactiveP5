@@ -1,5 +1,9 @@
-import { NgtColorPipeModule, NgtCoreModule, NgtFogPipeModule, NgtObjectInputsControllerModule } from '@angular-three/core';
-import { NgtBoxGeometryModule, NgtCircleGeometryModule, NgtConeGeometryModule } from '@angular-three/core/geometries';
+import {
+  NgtColorPipeModule, NgtCoreModule, NgtFogPipeModule, NgtObjectInputsControllerModule, NgtRadianPipeModule
+} from '@angular-three/core';
+import {
+  NgtBoxGeometryModule, NgtBufferGeometryModule, NgtCircleGeometryModule, NgtConeGeometryModule
+} from '@angular-three/core/geometries';
 import { NgtBoxHelperModule, NgtGridHelperModule } from '@angular-three/core/helpers';
 import { NgtAmbientLightModule, NgtDirectionalLightModule, NgtHemisphereLightModule } from '@angular-three/core/lights';
 import {
@@ -14,18 +18,21 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { CanvasContentComponent } from './canvas-content/canvas-content.component';
 import { GeneratedObjectsComponent } from './canvas-content/generated-objects/generated-objects.component';
+import { ObjectDotgridComponent } from './canvas-content/generated-objects/object-dotgrid/object-dotgrid.component';
 import { MainCanvasComponent } from './main-canvas.component';
 
 @NgModule({
   declarations: [
     MainCanvasComponent,
     CanvasContentComponent,
-    GeneratedObjectsComponent
+    GeneratedObjectsComponent,
+    ObjectDotgridComponent
   ],
   exports: [
     MainCanvasComponent,
     CanvasContentComponent,
-    GeneratedObjectsComponent
+    GeneratedObjectsComponent,
+    ObjectDotgridComponent
   ],
   imports: [
     CommonModule,
@@ -60,7 +67,9 @@ import { MainCanvasComponent } from './main-canvas.component';
     NgtSobaOrbitControlsModule,
 //
     NgtCircleGeometryModule,
-    NgtLineDashedMaterialModule
+    NgtLineDashedMaterialModule,
+    NgtRadianPipeModule,
+    NgtBufferGeometryModule
   ]
 })
 export class MainCanvasModule {}
