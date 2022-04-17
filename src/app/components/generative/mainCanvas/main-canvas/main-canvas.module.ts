@@ -2,7 +2,7 @@ import {
   NgtColorPipeModule, NgtCoreModule, NgtFogPipeModule, NgtObjectInputsControllerModule, NgtRadianPipeModule
 } from '@angular-three/core';
 import {
-  NgtBoxGeometryModule, NgtBufferGeometryModule, NgtCircleGeometryModule, NgtConeGeometryModule
+  NgtBoxGeometryModule, NgtBufferGeometryModule, NgtCircleGeometryModule, NgtConeGeometryModule, NgtSphereGeometryModule
 } from '@angular-three/core/geometries';
 import { NgtBoxHelperModule, NgtGridHelperModule } from '@angular-three/core/helpers';
 import { NgtAmbientLightModule, NgtDirectionalLightModule, NgtHemisphereLightModule } from '@angular-three/core/lights';
@@ -69,7 +69,8 @@ import { MainCanvasComponent } from './main-canvas.component';
     NgtCircleGeometryModule,
     NgtLineDashedMaterialModule,
     NgtRadianPipeModule,
-    NgtBufferGeometryModule
+    NgtBufferGeometryModule,
+    NgtSphereGeometryModule
   ]
 })
 export class MainCanvasModule {}

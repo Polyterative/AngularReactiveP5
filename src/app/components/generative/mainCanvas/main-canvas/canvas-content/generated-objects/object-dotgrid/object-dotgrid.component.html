@@ -1,7 +1,12 @@
-<ngt-mesh [position]="[0,75,0]"
+<ngt-mesh [position]="[0,50,0]"
           [color]="'#961c1c'|color"
 >
-  <ngt-box-geometry [args]="[100,.1,50]">
-  </ngt-box-geometry>
-  <ngt-line-dashed-material></ngt-line-dashed-material>
+  <ngt-sphere-geometry [args]="[
+  item.dimensions.x,
+ 16,
+ 16
+  ]"
+  >
+  </ngt-sphere-geometry>
+  <ngt-mesh-basic-material></ngt-mesh-basic-material>
 </ngt-mesh>

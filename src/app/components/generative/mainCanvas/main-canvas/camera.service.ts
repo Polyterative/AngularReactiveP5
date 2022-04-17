@@ -6,7 +6,7 @@ import { ConstantsService } from './constants.service';
 @Injectable()
 export class CameraService {
 
-  public options: PerspectiveCamera = new PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.01, 5000);
+  public options: PerspectiveCamera = new PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 5000);
 
   private zHorizon = new Vector3(0, 0, 100000);
 

@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { bufferCount, filter, map, withLatestFrom } from 'rxjs';
+import { filter, map } from 'rxjs';
 import { Vector3 } from 'three';
 import { CameraService } from '../../camera.service';
 import { ConstantsService } from '../../constants.service';
+import { AbletonService } from './ableton.service';
 import { Models } from './Models';
 
 @Component({
@@ -20,19 +21,22 @@ export class GeneratedObjectsComponent implements OnInit {
   constructor(
     public cameraService: CameraService,
     public constantsService: ConstantsService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    private oscServer: AbletonService
   ) {
 
-    this.constantsService.beat$
+    // this.constantsService.beat$
+    this.oscServer.events.note$
       .pipe(
-        bufferCount(8),
-        withLatestFrom(this.constantsService.tick$),
+        // bufferCount(8),
+        // withLatestFrom(this.constantsService.tick$),
         // map(([beats, tick]) => tick)
-        map(([beats, tick]) => this.cameraService.options.position.z)
+        // map(([beats, tick]) => this.cameraService.options.position.z)
+        map((_) => this.cameraService.options.position.z)
       )
       .subscribe((x) => {
         // add new objects to the array
-        let forwardOffset: number = 250;
+        let forwardOffset: number = -50;
         // let calculatedCurrentCameraPosition: number = x / this.cameraService.speedDivider;
         let calculatedCurrentCameraPosition: number = x;
         this.objects.push({
@@ -46,19 +50,29 @@ export class GeneratedObjectsComponent implements OnInit {
             0,
             0
           ),
+          dimensions: new Vector3(
+            1,
+            1,
+            1
+          ),
           type: Models.ObjectTypes.FLAT_CIRCLE
         });
 
         this.objects.push({
           position: new Vector3(
+            Math.sin(calculatedCurrentCameraPosition / 100) * Math.random() * 25,
             0,
-            10,
             (calculatedCurrentCameraPosition + forwardOffset)
           ),
           rotation: new Vector3(
             0,
             0,
             0
+          ),
+          dimensions: new Vector3(
+            5,
+            5,
+            .01
           ),
           type: Models.ObjectTypes.DOTGRID
         });

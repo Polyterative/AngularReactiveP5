@@ -14,6 +14,12 @@ export class ObjectDotgridComponent implements OnInit {
   constructor() { }
 
   ngOnInit(): void {
+    // randomize width and height
+    // this.item.position.set(
+    //   Math.random() * this.item.dimensions.x,
+    //   Math.random() * this.item.dimensions.y,
+    //   Math.random() * this.item.dimensions.z
+    // )
   }
 
 }

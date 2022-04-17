@@ -17,6 +17,7 @@ export namespace Models {
   export interface PositionedObject {
     position: Vector3;
     rotation: Vector3;
+    dimensions: Vector3;
     type: ObjectType;
   }
 
