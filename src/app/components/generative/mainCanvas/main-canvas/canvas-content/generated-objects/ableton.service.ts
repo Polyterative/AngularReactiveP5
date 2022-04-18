@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { io } from 'socket.io-client';
 // import * as osc from 'osc';
 // import * as osc from 'osc';
 // import osc from 'osc';
@@ -14,49 +15,92 @@ export class AbletonService {
     note$: new Subject<number>()
   }
 
-  // osc :Osc
   constructor() {
 
-    // @ts-ignore
-    // const oscA = new window.osc()
+    let socket = io('http://localhost:8081');
 
-    let osc = window.osc;
+    console.log('socket', socket);
 
-    let oscPort = new osc.WebSocketPort({
-      url: 'ws://localhost:4200', // URL to your Web Socket server.
-      metadata: true
+    // client-side
+    socket.on('connect', () => {
+      console.log(socket.id);
     });
 
-    oscPort.on('open', () => {
-      console.log('open');
+    socket.on('disconnect', () => {
+      console.log(socket.id);
     });
 
-    oscPort.open();
+    socket.on('connect', function () {
+      console.log('connected');
 
-    oscPort.on('message', (msg: any) => {
-      console.log(msg);
+      // sends to socket.io server the host/port of oscServer
+      // and oscClient
+      // socket.emit(
+      //   'config',
+      //   {
+      //     server: {
+      //       port: 8001,
+      //       host: '127.0.0.1'
+      //     },
+      //     client: {
+      //       port: 8000,
+      //       host: '127.0.0.1'
+      //     }
+      //   }
+      // );
     });
 
-    // let oscA = new osc.Osc();
-    console.log(osc)
-    console.log(oscPort);
+    socket.on('message', function (obj) {
+      var status = document.getElementById('status');
+      console.log(obj);
+    });
 
-    // const osc = new OSC({ plugin: new OSC.WebsocketServerPlugin() })
-    // osc.open() // listening on 'ws://localhost:8080'
+    socket.on('emit', function (obj) {
+      console.log(obj);
+    });
 
-    // let webmidi = from(
-    //   WebMidi.enable()
-    // )
-    //   .pipe(
+    // interval(1000).subscribe(() => {
+    //   socket.emit('message', '/foo/bar 1 2 3');
+    //   console.log('sent');
     //
-    //   )
-    //   .subscribe(value => {
-    //     // const mySynth = WebMidi.inputs[0];
-    //     const mySynth = WebMidi.getInputByName('MIDILOOP')
-    //
-    //     mySynth.channels[1].addListener('noteon', e => {
-    //       this.events.note$.next(e.note.number)
-    //     });
-    //   });
+    // });
   }
+
 }
+
+// // osc :Osc
+// constructor(
+//   zone: NgZone
+// ) {
+//
+//   var socket = io('localhost:8081');
+//
+//   socket.on('connect', function () {
+//     console.warn('connected');
+//
+//     // sends to socket.io server the host/port of oscServer
+//     // and oscClient
+//     socket.emit(
+//       'config',
+//       {
+//         server: {
+//           port: 8001,
+//           host: '127.0.0.1'
+//         },
+//         client: {
+//           port: 8000,
+//           host: '127.0.0.1'
+//         }
+//       }
+//     );
+//   });
+//
+//   socket.on('message', function (obj) {
+//     // status.innerHTML = obj[1]+" "+obj[0];
+//     console.log(obj);
+//   });
+//
+//   console.log(socket);
+//
+// }
+// }

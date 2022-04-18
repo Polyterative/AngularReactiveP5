@@ -24,7 +24,7 @@
     "@angular/router":                   "~13.3.3",
     "@tawaship/canvas-recorder":         "^1.1.1",
     "p5":                                "^1.4.1",
-    "osc":                               "^2.4.3",
+    "socket.io-client":                  "^4.4.1",
     "rxjs":                              "~7.5.5",
     "three":                             "0.137",
     "tslib":                             "^2.3.1",
